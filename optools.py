@@ -76,6 +76,16 @@ def gather_res(file_name_lst):
     return res_dict
 
 
+def is_station_enough(res_pool,timestr,threshold=70):
+    '''判断文件源池中指定时次的站点数是否足够'''
+    if len(res_pool[timestr]) < threshold:
+        result = False
+    else:
+        result = True
+
+    return result
+
+
 def standard_time_index():
     '''建立逐6分钟标准时间索引'''
     now = dt.now()
