@@ -1,28 +1,35 @@
 # coding : utf-8
-
-import os
+'''
+--------------------------------------------------------------------
+项目名：WDPF ( WinD ProFile )
+模块名：optools
+该模块包含了本项目与业务化处理有关的函数
+--------------------------------------------------------------------
+python = 3.6
+version = 0.0.1
+--------------------------------------------------------------------
+ 李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
+--------------------------------------------------------------------
+'''
 from datetime import datetime as dt
 import time
-import pdb
+
 
 def timing(func):
-    '''
-    计时装饰器
-    '''
-    def wrapper(*args,**kwargs):
+    '''计时装饰器'''
+    def wrapper(*args, **kwargs):
         print('函数名:{0}'.format(func.__name__))
-        t0 = time.time()
-        result = func(*args,**kwargs)
-        t1 = time.time()
-        print('用时{:.2f}秒'.format(t1-t0))
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print('用时{:.2f}秒'.format(end_time-start_time))
         return result
     return wrapper
 
+
 @timing
-def standardTimeIndex():
-    '''
-    建立逐6分钟标准时间索引
-    '''
+def standard_time_index():
+    '''建立逐6分钟标准时间索引'''
     now = dt.now()
     year = str(now.year)
     month = str(now.month).zfill(2)
@@ -31,17 +38,18 @@ def standardTimeIndex():
     hours = [str(n).zfill(2) for n in range(24)]
     minutes = [str(n).zfill(2) for n in range(0, 60, 6)]
 
-    standard_time_index = []
-    for h in hours:
-        for m in minutes:
-            standard_time_index.append(''.join([date, h, m]))
+    # stdt : standard time
+    stdt_index = []
+    for hour in hours:
+        for minute in minutes:
+            stdt_index.append(''.join([date, hour, minute]))
 
-    return tuple(standard_time_index)
+    return tuple(stdt_index)
+
 
 @timing
-def matchStandard(timestr):
-    '''
-    （规定格式的）任意时间字符串向标准时间索引的匹配
+def match_standard(timestr):
+    '''（规定格式的）任意时间字符串向标准时间索引的匹配
 
     输入参数
     -------
@@ -55,44 +63,50 @@ def matchStandard(timestr):
     '''
     assert len(timestr) == 12
 
+    # ymdh : year-month-day-hour
     ymdh = timestr[:10]
     minute = int(timestr[10:])
 
-    sdt_index = standardTimeIndex()
+    sdt_index = standard_time_index()
     delt = []
-    for n, i in enumerate(sdt_index):
-        if ymdh == i[:10]:
-            delt.append((abs(minute-int(i[10:])), n))
+    for index, time_str in enumerate(sdt_index):
+        if ymdh == time_str[:10]:
+            delt.append((abs(minute-int(time_str[10:])), index))
 
     min_index = min(delt)[1]
 
     return sdt_index[min_index]
 
-@timing
-def abstrTime(fn,res='WPRD',level='full'):
-    if level == 'hour':
-        return fn.split('_')[4][:10]
-    elif level == 'minute':
-        return fn.split('_')[4][:12]
-    elif level == 'full':
-        return fn.split('_')[4]
 
 @timing
-def gatherRes(fn_lst):
-    std_index = standardTimeIndex()
-    res_pool = {sti:[] for sti in std_index}
-    for k in res_pool:
-        for fn in fn_lst:
-            res_timestr = abstrTime(fn,level='minute')
-            match_timestr = matchStandard(res_timestr)
-            if match_timestr == k:
-                res_pool[k].append(fn)
+def abstr_time(file_name, level='full'):
+    '''从字符串提取时间'''
+    if level == 'hour':
+        result = file_name.split('_')[4][:10]
+    elif level == 'minute':
+        result = file_name.split('_')[4][:12]
+    elif level == 'full':
+        result = file_name.split('_')[4]
+
+    return result
+
+@timing
+def gather_res(file_name_lst):
+    '''收集文件源'''
+    std_index = standard_time_index()
+    res_pool = {sti: [] for sti in std_index}
+    for key in res_pool:
+        for file_name in file_name_lst:
+            res_timestr = abstr_time(file_name, level='minute')
+            match_timestr = match_standard(res_timestr)
+            if match_timestr == key:
+                res_pool[key].append(file_name)
 
     return res_pool
 
 
-
 def main():
+    '''主函数'''
     pass
 
 
