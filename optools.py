@@ -11,18 +11,26 @@ version = 0.0.1
  李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
 --------------------------------------------------------------------
 '''
+import os
+import pickle as pk
 from datetime import datetime as dt
 import time
+from collections import defaultdict
+import pdb
 
 
 def timing(func):
     '''计时装饰器'''
     def wrapper(*args, **kwargs):
-        print('函数名:{0}'.format(func.__name__))
+        # print('函数名:{0}'.format(func.__name__))
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
-        print('用时{:.2f}秒'.format(end_time-start_time))
+        # print('用时{:.2f}秒'.format(end_time-start_time))
+        global time_statics
+        delt = end_time - start_time
+        time_statics[func.__name__] += delt
+
         return result
     return wrapper
 
@@ -48,35 +56,69 @@ def drop_duplicate_station(old_res_dict):
         station_id = file_name.split('_')[3]
         return station_id
 
-    new_res_dict = defaultdict(list)
+    new_res_dict = defaultdict(set)
     for std_time in old_res_dict:
         unique_station = set([])
         for file_name in old_res_dict[std_time]:
             station_id = get_station_id(file_name)
             if station_id not in unique_station:
                 unique_station.add(station_id)
-                new_res_dict[std_time].append(file_name)
+                new_res_dict[std_time].add(file_name)
             else:
                 pass
 
     return new_res_dict
 
 
-def gather_res(file_name_lst):
+def gather_res(file_name_lst, preset):
     '''收集文件源（文件名）'''
-    std_index = standard_time_index()
-    res_dict = {sti: [] for sti in std_index}
-    for key in res_dict:
-        for file_name in file_name_lst:
-            res_timestr = abstr_time(file_name, level='minute')
-            match_timestr = match_standard(res_timestr)
-            if match_timestr == key:
-                res_dict[key].append(file_name)
+    res_dict = defaultdict(set)
 
-    return res_dict
+    # （未处理）新集是当前全集减去前集
+    queue = set(file_name_lst) - preset
+    print('queue:{}'.format(len(queue)))
+    print('preset_files:{}'.format(len(preset)))
+
+    # 对新集时间字符串进行匹配处理，匹配成功则添加到源字典中，匹配失败则忽略
+
+    for file in queue:
+        res_timestr = abstr_time(file, level='minute')
+        # 每一个文件都在标准时间索引中找一个与之最近的时次，如果该结果与迭代中的时次相同，
+        #  则可以追加到res_dict在该时次的列表里。
+        match_timestr = match_standard(res_timestr,STD_INDEX)
+        res_dict[match_timestr].add(file)
+        preset.add(file)
+
+    # 删除该时次重复的站
+    res_dict = drop_duplicate_station(res_dict)
+
+    # 删除到站不全的时次，待下次再次扫描
+    to_remove = set([])
+    for time_index in res_dict:
+        if not is_station_enough(res_dict,time_index):
+            for file in res_dict[time_index]:
+                preset.remove(file)
+            to_remove.add(time_index)
+
+    # 在遍历过程中不能改变字典长度，因此在遍历结束以后删除要素
+    try:
+        for remove in to_remove:
+            res_dict.pop(remove)
+    except UnboundLocalError:
+        pass
+
+    newset = set(res_dict.keys())
+
+    # 若新集存在，启动任务标识
+    if newset:
+        has_new_task = True
+    else:
+        has_new_task = False
+
+    return res_dict, preset, queue, has_new_task
 
 
-def is_station_enough(res_pool,timestr,threshold=70):
+def is_station_enough(res_pool, timestr, threshold=70):
     '''判断文件源池中指定时次的站点数是否足够'''
     if len(res_pool[timestr]) < threshold:
         result = False
@@ -86,9 +128,38 @@ def is_station_enough(res_pool,timestr,threshold=70):
     return result
 
 
+def received_num(res_pool, timestr, threshold=70):
+    '''返回已接收的站点数'''
+    return len(res_pool[timestr])
+
+
+def init_preset(path):
+    '''初始化前集'''
+    if not os.path.exists(path):
+        with open(path, 'wb') as file_obj:
+            pk.dump(set([]), file_obj)
+
+
+def save_preset(preset, path):
+    '''存储前集'''
+    with open(path, 'wb') as file_obj:
+        pk.dump(preset, file_obj)
+
+
+def load_preset(path):
+    '''加载前集'''
+    with open(path, 'rb') as file_obj:
+        try:
+            preset = pk.load(file_obj)
+        except EOFError:
+            preset = set([])
+
+    return preset
+
+
 def standard_time_index():
     '''建立逐6分钟标准时间索引'''
-    now = dt.now()
+    now = dt.utcnow()
     year = str(now.year)
     month = str(now.month).zfill(2)
     day = str(now.day).zfill(2)
@@ -105,7 +176,7 @@ def standard_time_index():
     return tuple(stdt_index)
 
 
-def match_standard(timestr):
+def match_standard(timestr,STD_INDEX):
     '''（规定格式的）任意时间字符串向标准时间索引的匹配
 
     输入参数
@@ -124,15 +195,17 @@ def match_standard(timestr):
     ymdh = timestr[:10]
     minute = int(timestr[10:])
 
-    sdt_index = standard_time_index()
-    delt = []
-    for index, time_str in enumerate(sdt_index):
+    delt = set([])
+    for index, time_str in enumerate(STD_INDEX):
         if ymdh == time_str[:10]:
-            delt.append((abs(minute-int(time_str[10:])), index))
+            delt.add((abs(minute-int(time_str[10:])), index))
 
     min_index = min(delt)[1]
 
-    return sdt_index[min_index]
+    return STD_INDEX[min_index]
+
+
+STD_INDEX = standard_time_index()
 
 
 def main():

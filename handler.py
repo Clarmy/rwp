@@ -14,11 +14,12 @@ version = 0.0.1
 --------------------------------------------------------------------
 '''
 from sys import argv
-from io import read
-from io import head_info
-from io import save_as_json
+from wprio import read
+from wprio import head_info
+from wprio import save_as_json
 import numpy as np
 import pandas as pd
+from optools import timing
 
 
 def nan_2_none(func):
@@ -45,9 +46,11 @@ def multi_beam_mean(mod_data):
     for index, mod in enumerate(mod_data):
         for key in keys:
             if index == 0:
-                result_dict[key] = np.array(mod_data[mod][key]).astype(np.float64)
+                result_dict[key] = np.array(
+                    mod_data[mod][key]).astype(np.float64)
             else:
-                result_dict[key] += np.array(mod_data[mod][key]).astype(np.float64)
+                result_dict[key] += np.array(mod_data[mod]
+                                             [key]).astype(np.float64)
 
     for key in keys:
         result_dict[key] /= 5
@@ -90,8 +93,8 @@ def judge_mod(pfn):
     '''
     return pfn.split('.')[-2].split('_')[-1]
 
-
-def proc_wrap(pfn, func, mod):
+@timing
+def proc_wrap(pfn,  mod='ROBS', *func):
     '''
     process and wrap处理打包函数
     用于使用自定义函数处理数据并封装描述信息
@@ -100,7 +103,7 @@ def proc_wrap(pfn, func, mod):
     info = head_info(pfn, mod)
     if mod == 'RAD':
         result = func(data)
-    else:
+    elif mod == 'ROBS':
         result = data
     result.update(info)
 
