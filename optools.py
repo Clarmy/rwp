@@ -19,20 +19,20 @@ from collections import defaultdict
 import pdb
 
 
-def timing(func):
-    '''计时装饰器'''
-    def wrapper(*args, **kwargs):
-        # print('函数名:{0}'.format(func.__name__))
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        # print('用时{:.2f}秒'.format(end_time-start_time))
-        global time_statics
-        delt = end_time - start_time
-        time_statics[func.__name__] += delt
+# def timing(func):
+#     '''计时装饰器'''
+#     def wrapper(*args, **kwargs):
+#         # print('函数名:{0}'.format(func.__name__))
+#         start_time = time.time()
+#         result = func(*args, **kwargs)
+#         end_time = time.time()
+#         # print('用时{:.2f}秒'.format(end_time-start_time))
+#         global time_statics
+#         delt = end_time - start_time
+#         time_statics[func.__name__] += delt
 
-        return result
-    return wrapper
+#         return result
+#     return wrapper
 
 
 def abstr_time(file_name, level='full'):
@@ -77,7 +77,7 @@ def gather_res(file_name_lst, preset):
     # （未处理）新集是当前全集减去前集
     queue = set(file_name_lst) - preset
     print('queue:{}'.format(len(queue)))
-    print('preset_files:{}'.format(len(preset)))
+    # print('preset_files:{}'.format(len(preset)))
 
     # 对新集时间字符串进行匹配处理，匹配成功则添加到源字典中，匹配失败则忽略
 

@@ -19,7 +19,7 @@ from wprio import head_info
 from wprio import save_as_json
 import numpy as np
 import pandas as pd
-from optools import timing
+# from optools import timing
 
 
 def nan_2_none(func):
@@ -93,7 +93,7 @@ def judge_mod(pfn):
     '''
     return pfn.split('.')[-2].split('_')[-1]
 
-@timing
+
 def proc_wrap(pfn,  mod='ROBS', *func):
     '''
     process and wrap处理打包函数
