@@ -1,6 +1,6 @@
 # coding : utf-8
 '''
-module docstring
+本模块用于自动化解码风廓线雷达实时观测资料（ROBS）
 '''
 import os
 import json as js
@@ -75,7 +75,6 @@ def main(rootpath, outpath):
     preset_path = './preset/robs.pk'
 
     check_dir(outpath)
-    check_dir(preset_path)
 
     init_preset(preset_path)
 
@@ -92,11 +91,15 @@ def main(rootpath, outpath):
         files = os.listdir(inpath)
 
         res_pool, preset, queue, has_new_task = gather_res(files, preset)
-        LOGGER.info('队列中文件数:%i' % len(queue))
+        LOGGER.info(' file pool: %i' % len(queue))
+
+        print('file pool: %i' % len(queue))
+        print('='*30)
 
         if has_new_task:
-            for itime in res_pool:
-                LOGGER.info('正在生成:%s' % itime)
+            for itime in sorted(res_pool.keys()):
+                LOGGER.info(' processing: %s' % itime)
+                print('processing: %s' % itime)
                 js_str = gather_robs(res_pool, itime, inpath)
                 with open(savepath+itime+'.json', 'w') as file_obj:
                     file_obj.write(js_str)
@@ -110,9 +113,4 @@ def main(rootpath, outpath):
 if __name__ == '__main__':
     ROOT_PATH = '/mnt/data3/REALTIME_DATA/cmadata/RADR/WPRD/ROBS/'
     SAVE_PATH = '/mnt/data14/liwt/output/WPR/'
-    try:
-        main(ROOT_PATH, SAVE_PATH)
-    except Exception:
-        # 若抛出无法预期的异常，则在日志中记录该异常的提示信息
-        TRACEBACK = traceback.format_exc()
-        LOGGER.error('%s\n' % TRACEBACK)
+    main(ROOT_PATH, SAVE_PATH)

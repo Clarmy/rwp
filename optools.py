@@ -13,10 +13,13 @@ version = 0.0.1
 '''
 import os
 import pickle as pk
-from datetime import datetime as dt
+from datetime import datetime, timedelta
 import time
 from collections import defaultdict
 import pdb
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # def timing(func):
@@ -70,35 +73,125 @@ def drop_duplicate_station(old_res_dict):
     return new_res_dict
 
 
+def parse_log_timestr(log_timestr):
+    '''解析日志的时间字符串'''
+    date, clock = log_timestr.split(' ')
+    clock = clock.split(',')[0]
+
+    year, month, day = date.split('-')
+    hour, minute, second = clock.split(':')
+    return datetime(int(year), int(month), int(day),
+                    int(hour), int(minute), int(second))
+
+
+def next_time_index(timestr):
+    '''上一时次的时间字符串
+    '''
+    year = int(timestr[:4])
+    month = int(timestr[4:6])
+    day = int(timestr[6:8])
+    hour = int(timestr[8:10])
+    minute = int(timestr[10:])
+
+    this_time = datetime(year, month, day, hour, minute)
+    time_delt = timedelta(minutes=6)
+    previous_time = this_time + time_delt
+
+    return previous_time.strftime('%Y%m%d%H%M')
+
+
+def is_timeout(time_index):
+    '''判断是否超时
+    若最后一次日志记录与最后一次处理记录之间的时间差超过7分钟（420秒）则判定超时
+    '''
+    with open('./log/wprd') as log_obj:
+        logtext = log_obj.readlines()
+
+    # 从后往前扫描
+    logtext.reverse()
+    for line in logtext:
+        try:
+            datetimestr, action, value = line.strip().split(': ')
+            # pdb.set_trace()
+        except ValueError:
+            continue
+        if action == 'processing':
+            last_proc_time = parse_log_timestr(datetimestr)
+            expect_time_index = next_time_index(value)
+            break
+    else:
+        today = datetime.today()
+        last_proc_time = datetime(today.year, today.month, today.day, 0, 0, 0)
+        expect_time_index = time_index
+
+    if expect_time_index == time_index:
+        delt = datetime.now() - last_proc_time
+        print('delt seconds: {}'.format(delt.seconds))
+        if delt.seconds >= 600:
+            result = True
+        else:
+            result = False
+        return result
+    else:
+        print('in queque.')
+        result = False
+
+    return result
+
+
+# def is_timeout(time_index, timestamp, seconds=600):
+#     now = time.time()
+#     delt = now - timestamp[time_index]
+#     print('delt seconds: {:.2f}'.format(delt))
+#     if delt > seconds:
+#         return True
+#     else:
+#         return False
+
+
 def gather_res(file_name_lst, preset):
     '''收集文件源（文件名）'''
     res_dict = defaultdict(set)
+    preset_path = './preset/robs_time_index.pk'
+
+    if not os.path.exists(preset_path):
+        init_preset(preset_path)
+
+    index_preset = load_preset(preset_path)
 
     # （未处理）新集是当前全集减去前集
     queue = set(file_name_lst) - preset
-    print('queue:{}'.format(len(queue)))
-    # print('preset_files:{}'.format(len(preset)))
 
     # 对新集时间字符串进行匹配处理，匹配成功则添加到源字典中，匹配失败则忽略
 
     for file in queue:
         res_timestr = abstr_time(file, level='minute')
-        # 每一个文件都在标准时间索引中找一个与之最近的时次，如果该结果与迭代中的时次相同，
-        #  则可以追加到res_dict在该时次的列表里。
-        match_timestr = match_standard(res_timestr,STD_INDEX)
-        res_dict[match_timestr].add(file)
-        preset.add(file)
+        # 每一个文件匹配一个标准时间索引，以标准索引为键集中在一起
+        match_timestr = match_standard(res_timestr, STD_INDEX)
+        # 若该标准时间索引在索引前集内，则忽略该时次
+        if match_timestr not in index_preset:
+            res_dict[match_timestr].add(file)
+            preset.add(file)
 
     # 删除该时次重复的站
     res_dict = drop_duplicate_station(res_dict)
 
-    # 删除到站不全的时次，待下次再次扫描
+    # 不超时（10分钟以内）情况下到站不全(小于70个站点）的时次予以保留
     to_remove = set([])
     for time_index in res_dict:
-        if not is_station_enough(res_dict,time_index):
+        if time_index in index_preset:
+            break
+        station_is_enough = is_station_enough(res_dict, time_index)
+        time_is_out = is_timeout(time_index)
+
+        if not (station_is_enough | time_is_out):
             for file in res_dict[time_index]:
                 preset.remove(file)
-            to_remove.add(time_index)
+                to_remove.add(time_index)
+
+        # 若文件的前集不删，则索引也要同步入前集
+        else:
+            index_preset.add(time_index)
 
     # 在遍历过程中不能改变字典长度，因此在遍历结束以后删除要素
     try:
@@ -115,11 +208,16 @@ def gather_res(file_name_lst, preset):
     else:
         has_new_task = False
 
+    save_preset(index_preset, preset_path)
+
     return res_dict, preset, queue, has_new_task
 
 
 def is_station_enough(res_pool, timestr, threshold=70):
     '''判断文件源池中指定时次的站点数是否足够'''
+    print('{0}’s station num: {1}'.format(timestr, len(res_pool[timestr])))
+    logger.info(' {0}’s station num: {1}'.format(
+        timestr, len(res_pool[timestr])))
     if len(res_pool[timestr]) < threshold:
         result = False
     else:
@@ -159,7 +257,7 @@ def load_preset(path):
 
 def standard_time_index():
     '''建立逐6分钟标准时间索引'''
-    now = dt.utcnow()
+    now = datetime.utcnow()
     year = str(now.year)
     month = str(now.month).zfill(2)
     day = str(now.day).zfill(2)
@@ -167,7 +265,7 @@ def standard_time_index():
     hours = [str(n).zfill(2) for n in range(24)]
     minutes = [str(n).zfill(2) for n in range(0, 60, 6)]
 
-    # stdt : standard time
+    # std : standard time
     stdt_index = []
     for hour in hours:
         for minute in minutes:
@@ -176,7 +274,7 @@ def standard_time_index():
     return tuple(stdt_index)
 
 
-def match_standard(timestr,STD_INDEX):
+def match_standard(timestr, STD_INDEX):
     '''（规定格式的）任意时间字符串向标准时间索引的匹配
 
     输入参数
