@@ -21,22 +21,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
-# def timing(func):
-#     '''计时装饰器'''
-#     def wrapper(*args, **kwargs):
-#         # print('函数名:{0}'.format(func.__name__))
-#         start_time = time.time()
-#         result = func(*args, **kwargs)
-#         end_time = time.time()
-#         # print('用时{:.2f}秒'.format(end_time-start_time))
-#         global time_statics
-#         delt = end_time - start_time
-#         time_statics[func.__name__] += delt
-
-#         return result
-#     return wrapper
-
+def check_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def abstr_time(file_name, level='full'):
     '''从字符串提取时间'''
@@ -74,7 +61,18 @@ def drop_duplicate_station(old_res_dict):
 
 
 def parse_log_timestr(log_timestr):
-    '''解析日志的时间字符串'''
+    '''解析日志的时间字符串
+
+    参数
+    ----
+    log_timestr : `str`
+        读取日志的时间字符串，例如2018-09-18 09:26:13,067
+
+    返回
+    ----
+    `datetime`
+        输入时间字符串对应的datetime格式对象
+    '''
     date, clock = log_timestr.split(' ')
     clock = clock.split(',')[0]
 
@@ -85,7 +83,18 @@ def parse_log_timestr(log_timestr):
 
 
 def next_time_index(timestr):
-    '''上一时次的时间字符串
+    '''下一时次的时间字符串
+
+    参数
+    ----
+    timestr : `str`
+        时间字符串，精确到分钟级，例如201809101306
+
+    返回
+    ----
+    `str`
+        时间字符串，即输入时间字符串往后推6分钟的值
+        例如输入值为201809101306，则返回值为201809101312
     '''
     year = int(timestr[:4])
     month = int(timestr[4:6])
@@ -95,15 +104,44 @@ def next_time_index(timestr):
 
     this_time = datetime(year, month, day, hour, minute)
     time_delt = timedelta(minutes=6)
-    previous_time = this_time + time_delt
+    next_time = this_time + time_delt
 
-    return previous_time.strftime('%Y%m%d%H%M')
+    return next_time.strftime('%Y%m%d%H%M')
+
+
+def strftime_to_datetime(strftime):
+    '''将时间字符串输出为datetime格式对象
+
+    输入
+    ----
+    strftime : `str`
+        时间字符串，精确到分钟，例如201809101306
+
+    返回
+    ----
+    `datetime`
+        输入时间字符串对应的datetime对象
+    '''
+    year = int(strftime[:4])
+    month = int(strftime[4:6])
+    day = int(strftime[6:8])
+    hour = int(strftime[8:10])
+    minute = int(strftime[10:])
+
+    return datetime(year, month, day, hour, minute)
 
 
 def is_timeout(time_index):
     '''判断是否超时
-    若最后一次日志记录与最后一次处理记录之间的时间差超过7分钟（420秒）则判定超时
+    若当前时间与最后一次处理记录之间的时间差超过7分钟（420秒）则判定超时，
+    若当前时刻滞后于所到文件时刻（收到了来自未来的文件），则最大时间阈值顺延10秒。
     '''
+    threshold = 420
+    # 如果所到文件时次已经超过utc当前时刻，那么时间阈值也要相应地后延10秒
+    if datetime.utcnow() < strftime_to_datetime(time_index):
+        threshold += 10
+
+    # 用日志信息获取历史处理记录，用以判断是否超时
     with open('./log/wprd') as log_obj:
         logtext = log_obj.readlines()
 
@@ -111,42 +149,48 @@ def is_timeout(time_index):
     logtext.reverse()
     for line in logtext:
         try:
+            # value 为已处理文件的文件名，它是日志中紧跟processing后面的一组数字串
+            # 例如 201809170848，程序根据这一数字串来推算下一时次的数字串
             datetimestr, action, value = line.strip().split(': ')
-            # pdb.set_trace()
         except ValueError:
+            # 在非processing行时跳出此次循环
             continue
         if action == 'processing':
+            # 若是processing行，则记录最后一次处理记录last_proc_time（本地时间）
+            # 同时根据value值推算下一时次文件的变量名（UTC时间）
             last_proc_time = parse_log_timestr(datetimestr)
+            # expect_time_index 即期望时次，它必须紧随上一个已处理时次。
             expect_time_index = next_time_index(value)
             break
     else:
+        # 如果上述循环没有被break终止，说明当前日志文件中不存在processing行，\
+        #     在初始建立日志文件时会出现这种情况这时候需要手动设置last_proc_time \
+        #     和 expect_time_index 的值
         today = datetime.today()
+
+        # 把last_proc_time设置为当天的00:00:00，即当天初始时间，通过这样的设置可以使\
+        #     程序在当天任何时刻启动都能把当天的历史数据补齐。
         last_proc_time = datetime(today.year, today.month, today.day, 0, 0, 0)
+
+        # 把 expect_time_index 设置为当前处理时次（UTC），
+        #     可以使程序直接开始处理此时刻而无需排队。
         expect_time_index = time_index
 
     if expect_time_index == time_index:
+        # 若期望时次与当前时次相吻合则判断该时次是否超时
         delt = datetime.now() - last_proc_time
         print('delt seconds: {}'.format(delt.seconds))
-        if delt.seconds >= 600:
+        if delt.seconds >= threshold:
             result = True
         else:
             result = False
         return result
     else:
+        # 若当前时次不是期望时次，则加入队列，不予计时
         print('in queque.')
         result = False
 
     return result
-
-
-# def is_timeout(time_index, timestamp, seconds=600):
-#     now = time.time()
-#     delt = now - timestamp[time_index]
-#     print('delt seconds: {:.2f}'.format(delt))
-#     if delt > seconds:
-#         return True
-#     else:
-#         return False
 
 
 def gather_res(file_name_lst, preset):
@@ -163,11 +207,12 @@ def gather_res(file_name_lst, preset):
     queue = set(file_name_lst) - preset
 
     # 对新集时间字符串进行匹配处理，匹配成功则添加到源字典中，匹配失败则忽略
-
     for file in queue:
         res_timestr = abstr_time(file, level='minute')
+
         # 每一个文件匹配一个标准时间索引，以标准索引为键集中在一起
         match_timestr = match_standard(res_timestr, STD_INDEX)
+
         # 若该标准时间索引在索引前集内，则忽略该时次
         if match_timestr not in index_preset:
             res_dict[match_timestr].add(file)
@@ -176,7 +221,7 @@ def gather_res(file_name_lst, preset):
     # 删除该时次重复的站
     res_dict = drop_duplicate_station(res_dict)
 
-    # 不超时（10分钟以内）情况下到站不全(小于70个站点）的时次予以保留
+    # 不超时（7分钟以内）情况下到站不全(小于70个站点）的时次予以保留
     to_remove = set([])
     for time_index in res_dict:
         if time_index in index_preset:
@@ -184,6 +229,7 @@ def gather_res(file_name_lst, preset):
         station_is_enough = is_station_enough(res_dict, time_index)
         time_is_out = is_timeout(time_index)
 
+        # 在到站不够且时间未超时时，剔除该时次，使其下一次再尝试
         if not (station_is_enough | time_is_out):
             for file in res_dict[time_index]:
                 preset.remove(file)
@@ -193,7 +239,7 @@ def gather_res(file_name_lst, preset):
         else:
             index_preset.add(time_index)
 
-    # 在遍历过程中不能改变字典长度，因此在遍历结束以后删除要素
+    # 在遍历结束以后删除要素
     try:
         for remove in to_remove:
             res_dict.pop(remove)

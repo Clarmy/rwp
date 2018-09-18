@@ -238,15 +238,62 @@ def head_info(pfn, mod='ROBS'):
     result : `dictionary`
         包含该数据文件的站号（station）、经度（lon）、纬度（lat）、海拔高度（altitude）、波段（wave）、时间（time）的字典
     '''
+
+    def item_num(item):
+        '''用于识别项索引位置'''
+        if item:
+            if len(item) == 5:
+                result = 0
+            elif len(item) == 9:
+                result = 1
+            elif len(item) == 8:
+                result = 2
+            elif len(item) == 7:
+                result = 3
+            elif len(item) == 2:
+                result = 4
+            elif len(item) == 14:
+                result = 5
+            else:
+                result = None
+        else:
+            result = None
+
+        return result
+
+    def fill_miss(items):
+        '''用递归算法在缺失项插入None'''
+        if len(items) < 6:
+
+            expect_items_num = set([0,1,2,3,4,5])
+            exist_items_num = set([])
+            for item in items:
+                num = item_num(item)
+                if num != None:
+                    exist_items_num.add(num)
+                else:
+                    pass
+            miss_items = list(expect_items_num - exist_items_num)
+            miss_items.sort()
+            miss_item = miss_items[0]
+            items.insert(miss_item,None)
+
+            return fill_miss(items)
+        else:
+            return items
+
     with open(pfn, encoding='utf-8', errors='ignore') as fileobj:
         content = fileobj.readlines()
+
     if mod == 'ROBS':
-        try:
-            items = content[1].strip().split(' ')
-            exist_items = [item for item in items if item]
-            stn, lon, lat, hgt, wav, time = exist_items
-        except ValueError:
-            pdb.set_trace()
+        items = content[1].strip().split(' ')
+        exist_items = [item for item in items if item]
+
+        # 用递归算法在缺失项插入None
+        expect_items = fill_miss(exist_items)
+
+        stn, lon, lat, hgt, wav, time = expect_items
+
     elif mod == 'RAD':
         stn, lon, lat, hgt, wav = content[1].strip().split(' ')
         time = content[3].split(' ')[1]

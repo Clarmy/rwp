@@ -1,11 +1,16 @@
 # coding : utf-8
 '''
 本模块用于自动化解码风廓线雷达实时观测资料（ROBS）
+python=3.6
+
+to do list:
+    更换到新的一天时，新日志需要旧日志的一些内容
+    更换到新的一天时，旧目录还没处理完的情况处理
 '''
 import os
 import json as js
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import traceback
 from logging.handlers import TimedRotatingFileHandler
@@ -15,6 +20,7 @@ from optools import gather_res
 from optools import init_preset
 from optools import save_preset
 from optools import load_preset
+from optools import check_dir
 
 # 配置日志信息
 LOGGER = logging.getLogger(__name__)
@@ -27,12 +33,6 @@ FILE_HANDLER.setFormatter(FORMATTER)
 LOGGER.addHandler(FILE_HANDLER)
 
 
-def check_dir(path):
-    '''检查并创建目录'''
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-
 def gather_robs(res_pool, itime, root_path):
     '''将同一标准时次所有站点的数据读取为json格式字符串'''
 
@@ -40,7 +40,10 @@ def gather_robs(res_pool, itime, root_path):
     for file in res_pool[itime]:
         path_file = root_path + file
         single_dict = proc_wrap(path_file)
-        result_list.append(js.dumps(single_dict))
+        if not single_dict:
+            return None
+        else:
+            result_list.append(js.dumps(single_dict))
 
     result_js = '\n'.join(result_list)
 
@@ -50,9 +53,14 @@ def gather_robs(res_pool, itime, root_path):
 def get_today_date():
     '''获得今日的日期字符串'''
     today = datetime.utcnow()
-    today_str = ''.join([str(today.year), str(today.month).zfill(2),
-                         str(today.day).zfill(2)])
+    today_str = today.strftime('%Y%m%d')
     return today_str
+
+
+def get_yesterday_date():
+    today = datetime.utcnow()
+    yesterday = today - timedelta(days=1)
+    return yesterday.strftime('%Y%m%d')
 
 
 def delay_when_today_dir_missing(rootpath):
@@ -63,29 +71,83 @@ def delay_when_today_dir_missing(rootpath):
     inpath = rootpath + today + '/'
     while True:
         if os.path.exists(inpath):
+            # LOGGER.info(' delay for today dir missing: end')
             is_exist = True
             break
-        time.sleep(10)
+        else:
+            LOGGER.info(' delay for today dir missing: retry')
+            print(' delay for today dir missing: retry')
+            print(today)
+            time.sleep(10)
 
     return is_exist
 
 
+def delay_when_data_dir_empty(path):
+    while True:
+        files = os.listdir(path)
+        if files:
+            # LOGGER.info(' is data dir empty: no')
+            is_empty = False
+            print('Preparing...')
+            time.sleep(5)
+            break
+        else:
+            LOGGER.info(' is data dir empty: yes')
+            time.sleep(10)
+
+    return is_empty
+
+
 def main(rootpath, outpath):
     '''主函数'''
-    preset_path = './preset/robs.pk'
 
     check_dir(outpath)
+    # 初始化今日日期
+    today = get_today_date()
 
+    preset_path = './preset/robs.%s.pk' % today
     init_preset(preset_path)
 
+    # 判断日期是否更改的标识变量
+    turn_day_switch = False
+
+    delay_when_today_dir_missing(rootpath)
+
+    # 初始化首次处理的文件目录
+    inpath = rootpath + today + '/'
+    savepath = outpath + today + '/'
+    check_dir(savepath)
+
+    # 若今日数据目录为空，则等待至其有值再继续
+    delay_when_data_dir_empty(inpath)
+
     while True:
+        # 如果当前日期与上次记录不一致，则建立转日时间戳
+        if get_today_date() != today and turn_day_switch == False:
+            turn_day_timestamp = time.time()
+            turn_day_switch = True
 
-        delay_when_today_dir_missing(rootpath)
+        # 若当前时间比转日时间戳的间隔达到300秒，则改变文件夹目录，正式转日
+        if turn_day_switch:
+            turn_day_delay = time.time() - turn_day_timestamp
+            if turn_day_delay >= 300:
 
-        today = get_today_date()
-        inpath = rootpath + today + '/'
-        savepath = outpath + today + '/'
-        check_dir(savepath)
+                turn_day_switch = False
+
+                today = get_today_date()
+                preset_path = './preset/robs.%s.pk' % today
+                init_preset(preset_path)
+
+                # 若今日的数据目录缺失，则等待至其到达再继续
+                delay_when_today_dir_missing(rootpath)
+
+                inpath = rootpath + today + '/'
+                savepath = outpath + today + '/'
+                check_dir(savepath)
+
+                # 若今日数据目录为空，则等待至其有值再继续
+                delay_when_data_dir_empty(inpath)
 
         preset = load_preset(preset_path)
         files = os.listdir(inpath)
@@ -101,8 +163,11 @@ def main(rootpath, outpath):
                 LOGGER.info(' processing: %s' % itime)
                 print('processing: %s' % itime)
                 js_str = gather_robs(res_pool, itime, inpath)
-                with open(savepath+itime+'.json', 'w') as file_obj:
-                    file_obj.write(js_str)
+                if js_str:
+                    with open(savepath+itime+'.json', 'w') as file_obj:
+                        file_obj.write(js_str)
+                else:
+                    continue
 
             save_preset(preset, preset_path)
 
