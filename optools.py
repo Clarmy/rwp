@@ -193,7 +193,7 @@ def is_timeout(time_index):
     return result
 
 
-def gather_res(file_name_lst, preset):
+def gather_res(file_name_lst, preset, STD_INDEX):
     '''收集文件源（文件名）'''
     res_dict = defaultdict(set)
     preset_path = './preset/robs_time_index.pk'
@@ -349,7 +349,7 @@ def match_standard(timestr, STD_INDEX):
     return STD_INDEX[min_index]
 
 
-STD_INDEX = standard_time_index()
+# STD_INDEX = standard_time_index()
 
 
 def main():

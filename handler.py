@@ -99,8 +99,11 @@ def proc_wrap(pfn,  mod='ROBS', *func):
     process and wrap处理打包函数
     用于使用自定义函数处理数据并封装描述信息
     '''
-    data = read(pfn, mod)
-    info = head_info(pfn, mod)
+    try:
+        data = read(pfn, mod)
+        info = head_info(pfn, mod)
+    except:
+        return None
     if mod == 'RAD':
         result = func(data)
     elif mod == 'ROBS':

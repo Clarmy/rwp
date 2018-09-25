@@ -2,7 +2,7 @@
 '''
 --------------------------------------------------------------------
 项目名：WDPF ( WinD ProFile )
-模块名：IO (Input & Output)
+模块名：wprio (Input & Output)
 该模块包含了本项目与输入输出相关的所有函数
 --------------------------------------------------------------------
 python = 3.6
@@ -156,8 +156,8 @@ def read(pfn, mod='ROBS'):
 
     if mod == 'ROBS':
         data_df = pd.read_csv(pfn, sep=' ', skiprows=3, skipfooter=1,
-                              names=['SH', 'HWD', 'HWS', 'VWS', 'HDR', 'VDR',
-                                     'CN2'], engine='python')
+                          names=['SH', 'HWD', 'HWS', 'VWS', 'HDR', 'VDR',
+                                 'CN2'], engine='python')
 
         # 由于当文件中含有/////时会以字符串格式导入，因此把字符串格式转化为数字类型
         # /////会被转换为 NaN

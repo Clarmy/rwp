@@ -21,6 +21,8 @@ from optools import init_preset
 from optools import save_preset
 from optools import load_preset
 from optools import check_dir
+from optools import standard_time_index
+
 
 # 配置日志信息
 LOGGER = logging.getLogger(__name__)
@@ -122,6 +124,9 @@ def main(rootpath, outpath):
     # 若今日数据目录为空，则等待至其有值再继续
     delay_when_data_dir_empty(inpath)
 
+    # 建立当天的标准时间索引
+    STD_INDEX = standard_time_index()
+
     while True:
         # 如果当前日期与上次记录不一致，则建立转日时间戳
         if get_today_date() != today and turn_day_switch == False:
@@ -149,10 +154,13 @@ def main(rootpath, outpath):
                 # 若今日数据目录为空，则等待至其有值再继续
                 delay_when_data_dir_empty(inpath)
 
+                # 建立当天的标准时间索引
+                STD_INDEX = standard_time_index()
+
         preset = load_preset(preset_path)
         files = os.listdir(inpath)
 
-        res_pool, preset, queue, has_new_task = gather_res(files, preset)
+        res_pool, preset, queue, has_new_task = gather_res(files, preset, STD_INDEX)
         LOGGER.info(' file pool: %i' % len(queue))
 
         print('file pool: %i' % len(queue))
