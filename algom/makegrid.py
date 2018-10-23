@@ -28,7 +28,7 @@ def veticl_interpolate(single_ds):
     返回值
     -----
     new_single_ds : `dict`
-        经过垂直插值处理后的单站数据集，经处理后其高度层为统一结构（100-10000,42层），
+        经过垂直插值处理后的单站数据集，经处理后其高度层为统一结构（100~10000,42层），
         缺省值为np.nan。
     '''
     # 制作标准高度层
@@ -77,9 +77,20 @@ def veticl_interpolate(single_ds):
     return new_single_ds
 
 
-def multi_station_vetcl_intp(dataset):
-    for line in dataset:
-        
+def multi_station_vetcl_intp(raw_dataset):
+    '''多站（全数据集）垂直积分
+
+    输入参数
+    -------
+    raw_dataset : `list`
+        多站数据列表，单行是单站数据（字典格式）
+
+    返回值
+    -----
+    `list`
+        经插值处理后的多站数据列表
+    '''
+    return [veticl_interpolate(line) for line in raw_dataset]
 
 
 def horiz_interpolate():
