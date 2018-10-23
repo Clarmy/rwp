@@ -71,6 +71,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb
 
 # pyenv
 .python-version
@@ -102,3 +103,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# ftpconfig
+.ftpconfig
+
+# operational folds
+log/
+preset/
+
+# test folds
+sampledata/
+data_sample/
