@@ -110,6 +110,7 @@ venv.bak/
 # operational folds
 log/
 preset/
+nohup.out
 
 # test folds
 sampledata/
