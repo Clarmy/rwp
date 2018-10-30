@@ -19,6 +19,16 @@ import datetime
 import pdb
 
 
+def load_js(filepath):
+    '''加载json数据'''
+    with open(filepath) as file_obj:
+        raw_content = file_obj.readlines()
+
+    data = [js.loads(line) for line in raw_content]
+
+    return data
+
+
 def read(pfn, mod='ROBS'):
     '''
     该函数用于读取风廓线雷达数据

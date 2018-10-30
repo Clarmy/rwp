@@ -1,12 +1,14 @@
 # coding:utf-8
+'''
+本模块用于对不规则站点数据进行格点化插值处理
+'''
 import sys
 sys.path.append('..')
 import json as js
 import numpy as np
 import netCDF4 as nc
-from scipy.interpolate import griddata
-from scipy.interpolate import interp1d
-from wprio import save_as_nc
+from scipy.interpolate import griddata, interp1d
+from wprio import save_as_nc, load_js
 import datetime
 import ipdb
 
@@ -29,16 +31,6 @@ def get_attr_dict():
                  'time':{'long_name':'datetime',
                          'units':'minutes since 2018-01-01 00:00:00'}}
     return attr_dict
-
-
-def load_data(filepath):
-    '''加载json数据'''
-    with open(filepath) as file_obj:
-        raw_content = file_obj.readlines()
-
-    data = [js.loads(line) for line in raw_content]
-
-    return data
 
 
 def std_sh():
@@ -124,7 +116,7 @@ def multi_station_vetcl_intp(raw_dataset):
 
 def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
     'VDR', 'CN2'],savepath=None):
-    '''多层水平插值
+    '''在单个站点垂直插值的基础上对所有站点所有层次进行插值处理
 
     输入参数
     -------
@@ -152,7 +144,7 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
         time_units = 'minutes since 2018-01-01 00:00:00'
         return nc.date2num(time_obj,time_units)
 
-    dataset = multi_station_vetcl_intp(load_data(pfn))
+    dataset = multi_station_vetcl_intp(load_js(pfn))
     sh = std_sh()
 
     min_lon = 85
