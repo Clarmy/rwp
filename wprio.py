@@ -6,7 +6,6 @@
 该模块包含了本项目与输入输出相关的所有函数
 --------------------------------------------------------------------
 python = 3.6
-version = 0.0.1
 依赖库：
     pandas        $ conda install pandas
 --------------------------------------------------------------------
@@ -116,7 +115,7 @@ def read(pfn, mod='ROBS'):
 
     示例
     ----
-    In [1]: from IO import read
+    In [1]: from wprio import read
 
     # RAD模式
     In [2]: radpath = './data/Z_RADA_I_51463_20180809000419_O_WPRD_LC_RAD.TXT'
@@ -236,7 +235,8 @@ def head_info(pfn, mod='ROBS'):
     返回值
     -----
     result : `dictionary`
-        包含该数据文件的站号（station）、经度（lon）、纬度（lat）、海拔高度（altitude）、波段（wave）、时间（time）的字典
+        包含该数据文件的站号（station）、经度（lon）、纬度（lat）、海拔高度（altitude）、
+        波段（wave）、时间（time）的字典。
     '''
 
     def item_num(item):
@@ -358,14 +358,16 @@ def save_as_json(data, path_fn, mod='single'):
              }
             ]
         注：
-        1.'line1', 'line2'...为自定义行识别键，仅用于行识别，在最终的json文件中不会显示该键
-        2.'label1','label2'...为数据要素名称键，该键须在每个记录行都保持一致
+        1.'line1', 'line2'...为自定义行识别键，仅用于行识别，在最终的json文件中不会显示该
+            键。
+        2.'label1','label2'...为数据要素名称键，该键须在每个记录行都保持一致。
 
     path_fn : `string`
         文件保存路径
 
     mod : `string`
-        模式选择，可设为'multi'或'single'，若输入数据为单个字典，则取single模式，若为多字典嵌套，则选multi模式
+        模式选择，可设为'multi'或'single'，若输入数据为单个字典，则取single模式，若为多字典
+        嵌套，则选multi模式。
     '''
     if mod == 'multi':
         multi_data = data
@@ -389,4 +391,3 @@ def save_as_json(data, path_fn, mod='single'):
 
 if __name__ == '__main__':
     pass
-
