@@ -18,6 +18,7 @@ from optools import save_preset
 from optools import load_preset
 from optools import check_dir
 from optools import standard_time_index
+from wprio import save_as_json
 
 
 # 配置日志信息
@@ -41,11 +42,9 @@ def gather_robs(res_pool, itime, root_path):
         if not single_dict:
             return None
         else:
-            result_list.append(js.dumps(single_dict))
+            result_list.append(single_dict)
 
-    result_js = '\n'.join(result_list)
-
-    return result_js
+    return result_list
 
 
 def get_today_date():
@@ -156,7 +155,8 @@ def main(rootpath, outpath):
         preset = load_preset(preset_path)
         files = os.listdir(inpath)
 
-        res_pool, preset, queue, has_new_task = gather_res(files, preset, STD_INDEX)
+        res_pool, preset, queue, has_new_task = gather_res(files, preset,
+            STD_INDEX)
         LOGGER.info(' file pool: %i' % len(queue))
 
         print('file pool: %i' % len(queue))
@@ -166,10 +166,9 @@ def main(rootpath, outpath):
             for itime in sorted(res_pool.keys()):
                 LOGGER.info(' processing: %s' % itime)
                 print('processing: %s' % itime)
-                js_str = gather_robs(res_pool, itime, inpath)
-                if js_str:
-                    with open(savepath+itime+'.json', 'w') as file_obj:
-                        file_obj.write(js_str)
+                result_list = gather_robs(res_pool, itime, inpath)
+                if result_list:
+                    save_as_json(result_list,savepath+itime+'.json',mod='multi')
                 else:
                     continue
 

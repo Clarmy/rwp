@@ -390,6 +390,7 @@ def save_as_json(data, path_fn, mod='single'):
     with open(path_fn, 'w') as fileobj:
         fileobj.write(result_js)
 
+
 def save_as_nc(data_dict, attr_dict, savepath):
     '''将数据字典和属性字典融合保存为netCDF4文件
 
@@ -410,12 +411,7 @@ def save_as_nc(data_dict, attr_dict, savepath):
 
     返回值
     -----
-    `bool` : 是否处理成功的标识，若顺利完成，返回True，否则返回False
-
-    示例
-    ----
-    暂无
-
+    `bool` : 是否处理成功的标识，若顺利完成，返回True
     '''
     # 判断数据是三维还是二维
     dim_num = 3
