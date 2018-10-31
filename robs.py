@@ -1,34 +1,58 @@
 # coding : utf-8
 '''
+--------------------------------------------------------------------
+项目名：wpr
+模块名：robs
 本模块用于自动化解码风廓线雷达实时观测资料（ROBS）
-python=3.6
+--------------------------------------------------------------------
+python = 3.6
+--------------------------------------------------------------------
+ 李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
+--------------------------------------------------------------------
 '''
+
 import os
 import json as js
 import time
 from datetime import datetime, timedelta
-import logging
 import traceback
-from logging.handlers import TimedRotatingFileHandler
 
-from handler import proc_wrap, gather_res, standard_time_index
+from handler import proc_wrap
+from optools import gather_res, standard_time_index
 from optools import init_preset, save_preset, load_preset
 from optools import check_dir
 from optools import get_today_date, get_yesterday_date
 from optools import delay_when_today_dir_missing
 from optools import delay_when_data_dir_empty
+# from optools import is_initial
 from wprio import save_as_json
+import ipdb
+
+from sys import argv
+
+try:
+    test_flag = argv[1]
+except IndexError:
+    LOG_PATH = './log/'
+    SAVE_PATH = '/mnt/data14/liwt/output/WPR/'
+    PRESET_PATH = './preset/'
+else:
+    if test_flag == 'test':
+        LOG_PATH = '/mnt/data14/liwt/test/log/'
+        PRESET_PATH = '/mnt/data14/liwt/test/preset/'
+        SAVE_PATH = '/mnt/data14/liwt/test/output/'
+    else:
+        print('Unkown flag')
+        exit()
+
+check_dir(LOG_PATH)
+check_dir(PRESET_PATH)
+check_dir(SAVE_PATH)
 
 
 # 配置日志信息
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
-FILE_HANDLER = TimedRotatingFileHandler('./log/wprd', when='midnight')
-FILE_HANDLER.suffix = '%Y%m%d.log'
-LOG_FORMAT = '%(asctime)s:%(message)s'
-FORMATTER = logging.Formatter(LOG_FORMAT)
-FILE_HANDLER.setFormatter(FORMATTER)
-LOGGER.addHandler(FILE_HANDLER)
+import log
+logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
 
 
 def gather_robs(res_pool, itime, root_path):
@@ -53,8 +77,8 @@ def main(rootpath, outpath):
     # 初始化今日日期
     today = get_today_date()
 
-    preset_path = './preset/robs.%s.pk' % today
-    init_preset(preset_path)
+    preset_pfn = PRESET_PATH + 'robs.%s.pk' % today
+    init_preset(preset_pfn)
 
     # 判断日期是否更改的标识变量
     turn_day_switch = False
@@ -72,6 +96,9 @@ def main(rootpath, outpath):
     # 建立当天的标准时间索引
     STD_INDEX = standard_time_index()
 
+    # 初次启动标志
+    initial = True
+
     while True:
         # 如果当前日期与上次记录不一致，则建立转日时间戳
         if get_today_date() != today and turn_day_switch == False:
@@ -86,8 +113,8 @@ def main(rootpath, outpath):
                 turn_day_switch = False
 
                 today = get_today_date()
-                preset_path = './preset/robs.%s.pk' % today
-                init_preset(preset_path)
+                preset_pfn = PRESET_PATH + 'robs.%s.pk' % today
+                init_preset(preset_pfn)
 
                 # 若今日的数据目录缺失，则等待至其到达再继续
                 delay_when_today_dir_missing(rootpath)
@@ -102,19 +129,37 @@ def main(rootpath, outpath):
                 # 建立当天的标准时间索引
                 STD_INDEX = standard_time_index()
 
-        preset = load_preset(preset_path)
+        preset = load_preset(preset_pfn)
         files = os.listdir(inpath)
 
-        res_pool, preset, queue, has_new_task = gather_res(files, preset,
-            STD_INDEX)
-        LOGGER.info(' file pool: %i' % len(queue))
+        if initial == True:
+            print('initialize.')
+            logger.info(' initialize.')
+        else:
+            pass
 
+        result = gather_res(files, preset,
+            STD_INDEX,LOG_PATH,PRESET_PATH,initial)
+
+        # 处理完成一次以后关闭initial标识
+        initial = False
+
+        res_pool = result['res_pool']
+        preset = result['preset']
+        queue = result['queue']
+        has_new_task = result['has_new_task']
+
+        # 总文件池
+        logger.info(' file pool: %i' % len(queue))
         print('file pool: %i' % len(queue))
-        print('='*30)
+
+        # 分割线
+        logger.info(' '+'-'*29)
+        print('-'*30)
 
         if has_new_task:
             for itime in sorted(res_pool.keys()):
-                LOGGER.info(' processing: %s' % itime)
+                logger.info(' processing: %s' % itime)
                 print('processing: %s' % itime)
                 result_list = gather_robs(res_pool, itime, inpath)
                 if result_list:
@@ -122,7 +167,7 @@ def main(rootpath, outpath):
                 else:
                     continue
 
-            save_preset(preset, preset_path)
+            save_preset(preset, preset_pfn)
 
         else:
             time.sleep(10)
@@ -130,5 +175,4 @@ def main(rootpath, outpath):
 
 if __name__ == '__main__':
     ROOT_PATH = '/mnt/data3/REALTIME_DATA/cmadata/RADR/WPRD/ROBS/'
-    SAVE_PATH = '/mnt/data14/liwt/output/WPR/'
     main(ROOT_PATH, SAVE_PATH)

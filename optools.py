@@ -1,12 +1,11 @@
 # coding : utf-8
 '''
 --------------------------------------------------------------------
-项目名：WDPF ( WinD ProFile )
+项目名：wpr
 模块名：optools
 该模块包含了本项目与业务化处理有关的函数
 --------------------------------------------------------------------
 python = 3.6
-version = 0.0.1
 --------------------------------------------------------------------
  李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
 --------------------------------------------------------------------
@@ -19,7 +18,8 @@ from collections import defaultdict
 import pdb
 import logging
 
-logger = logging.getLogger(__name__)
+# 调用全局日志
+logger = logging.getLogger('root')
 
 def check_dir(path):
     if not os.path.exists(path):
@@ -131,18 +131,26 @@ def strftime_to_datetime(strftime):
     return datetime(year, month, day, hour, minute)
 
 
-def is_timeout(time_index):
+def is_timeout(time_index,LOG_PATH,threshold=420):
     '''判断是否超时
-    若当前时间与最后一次处理记录之间的时间差超过7分钟（420秒）则判定超时，
+    若当前时间与最后一次处理记录之间的时间差超过阈值（默认420秒）则判定超时，
     若当前时刻滞后于所到文件时刻（收到了来自未来的文件），则最大时间阈值顺延10秒。
+
+    输入参数
+    -------
+
+
+    返回值
+    -----
+
+
     '''
-    threshold = 420
     # 如果所到文件时次已经超过utc当前时刻，那么时间阈值也要相应地后延10秒
     if datetime.utcnow() < strftime_to_datetime(time_index):
         threshold += 10
 
     # 用日志信息获取历史处理记录，用以判断是否超时
-    with open('./log/wprd') as log_obj:
+    with open(LOG_PATH+'wprd') as log_obj:
         logtext = log_obj.readlines()
 
     # 从后往前扫描
@@ -179,7 +187,8 @@ def is_timeout(time_index):
     if expect_time_index == time_index:
         # 若期望时次与当前时次相吻合则判断该时次是否超时
         delt = datetime.now() - last_proc_time
-        print('delt seconds: {}'.format(delt.seconds))
+        print(' delt seconds: {}'.format(delt.seconds))
+        logger.info(' delt seconds: {}'.format(delt.seconds))
         if delt.seconds >= threshold:
             result = True
         else:
@@ -188,15 +197,17 @@ def is_timeout(time_index):
     else:
         # 若当前时次不是期望时次，则加入队列，不予计时
         print('in queque.')
+        logger.info(' in queue.')
         result = False
 
     return result
 
 
-def gather_res(file_name_lst, preset, STD_INDEX):
+def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
+               initial):
     '''收集文件源（文件名）'''
     res_dict = defaultdict(set)
-    preset_path = './preset/robs_time_index.pk'
+    preset_path = PRESET_PATH + 'robs_time_index.pk'
 
     if not os.path.exists(preset_path):
         init_preset(preset_path)
@@ -227,17 +238,29 @@ def gather_res(file_name_lst, preset, STD_INDEX):
         if time_index in index_preset:
             break
         station_is_enough = is_station_enough(res_dict, time_index)
-        time_is_out = is_timeout(time_index)
 
         # 在到站不够且时间未超时时，剔除该时次，使其下一次再尝试
-        if not (station_is_enough | time_is_out):
-            for file in res_dict[time_index]:
-                preset.remove(file)
-                to_remove.add(time_index)
+        if initial == True:
+            # 初始启动程序，仅判断到站情况
+            if not (station_is_enough):
+                for file in res_dict[time_index]:
+                    preset.remove(file)
+                    to_remove.add(time_index)
 
-        # 若文件的前集不删，则索引也要同步入前集
+            # 若文件的前集不删，则索引也要同步入前集
+            else:
+                index_preset.add(time_index)
         else:
-            index_preset.add(time_index)
+            # 初始启动之后既判断到站情况也判断超时情况
+            time_is_out = is_timeout(time_index,LOG_PATH)
+            if not (station_is_enough | time_is_out):
+                for file in res_dict[time_index]:
+                    preset.remove(file)
+                    to_remove.add(time_index)
+
+            # 若文件的前集不删，则索引也要同步入前集
+            else:
+                index_preset.add(time_index)
 
     # 在遍历结束以后删除要素
     try:
@@ -256,25 +279,24 @@ def gather_res(file_name_lst, preset, STD_INDEX):
 
     save_preset(index_preset, preset_path)
 
-    return res_dict, preset, queue, has_new_task
+    result = {'res_pool':res_dict,'preset':preset,'queue':queue,
+              'has_new_task':has_new_task}
+
+    return result
 
 
 def is_station_enough(res_pool, timestr, threshold=70):
     '''判断文件源池中指定时次的站点数是否足够'''
-    print('{0}’s station num: {1}'.format(timestr, len(res_pool[timestr])))
+    num = len(res_pool[timestr])
+    print('{0}’s station num: {1}'.format(timestr, num))
     logger.info(' {0}’s station num: {1}'.format(
-        timestr, len(res_pool[timestr])))
-    if len(res_pool[timestr]) < threshold:
+        timestr, num))
+    if num < threshold:
         result = False
     else:
         result = True
 
     return result
-
-
-def received_num(res_pool, timestr, threshold=70):
-    '''返回已接收的站点数'''
-    return len(res_pool[timestr])
 
 
 def init_preset(path):
@@ -371,13 +393,9 @@ def delay_when_today_dir_missing(rootpath):
     inpath = rootpath + today + '/'
     while True:
         if os.path.exists(inpath):
-            # LOGGER.info(' delay for today dir missing: end')
             is_exist = True
             break
         else:
-            LOGGER.info(' delay for today dir missing: retry')
-            print(' delay for today dir missing: retry')
-            print(today)
             time.sleep(10)
 
     return is_exist
@@ -387,13 +405,11 @@ def delay_when_data_dir_empty(path):
     while True:
         files = os.listdir(path)
         if files:
-            # LOGGER.info(' is data dir empty: no')
             is_empty = False
             print('Preparing...')
             time.sleep(5)
             break
         else:
-            LOGGER.info(' is data dir empty: yes')
             time.sleep(10)
 
     return is_empty
