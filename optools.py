@@ -349,7 +349,54 @@ def match_standard(timestr, STD_INDEX):
     return STD_INDEX[min_index]
 
 
-# STD_INDEX = standard_time_index()
+def get_today_date():
+    '''获得今日的日期字符串'''
+    today = datetime.utcnow()
+    today_str = today.strftime('%Y%m%d')
+    return today_str
+
+
+def get_yesterday_date():
+    '''获得昨日的日期字符串'''
+    today = datetime.utcnow()
+    yesterday = today - timedelta(days=1)
+    return yesterday.strftime('%Y%m%d')
+
+
+def delay_when_today_dir_missing(rootpath):
+    '''检查今日目录是否存在'''
+
+    today = get_today_date()
+
+    inpath = rootpath + today + '/'
+    while True:
+        if os.path.exists(inpath):
+            # LOGGER.info(' delay for today dir missing: end')
+            is_exist = True
+            break
+        else:
+            LOGGER.info(' delay for today dir missing: retry')
+            print(' delay for today dir missing: retry')
+            print(today)
+            time.sleep(10)
+
+    return is_exist
+
+
+def delay_when_data_dir_empty(path):
+    while True:
+        files = os.listdir(path)
+        if files:
+            # LOGGER.info(' is data dir empty: no')
+            is_empty = False
+            print('Preparing...')
+            time.sleep(5)
+            break
+        else:
+            LOGGER.info(' is data dir empty: yes')
+            time.sleep(10)
+
+    return is_empty
 
 
 def main():
