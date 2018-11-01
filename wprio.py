@@ -30,16 +30,36 @@ def load_js(filepath):
     return data
 
 
-def read(pfn, mod='ROBS'):
+def parse(pfn):
+    '''产品文件解析
+    该函数可以自动识别产品类型（WNDROBS，WNDHOBS，WNDOOBS）
+
+    输入参数
+    -------
+    pfn : `string`
+        路径文件名
+
+    返回值
+    -----
+    dataset : `dictionary`
+        数据集字典，既包含数据也包含属性信息
     '''
-    该函数用于读取风廓线雷达数据
+    # 融合数据和属性信息
+    try:
+        data = parse_data(pfn)
+        info = parse_info(pfn)
+    except:
+        return None
 
-    风廓线雷达数据分为经向数据文件（RAD)和实时采样高度数据文件（ROBS）
+    dataset = data
+    dataset.update(info)
 
-    经向数据（RAD）
-    风廓线雷达径向数据文件包括两部分内容，一部分是参考信息即测站基本参数、雷达性能参数、
-    观测参数；另一部分是观测数据实体部分，包括每个波束在每个采样高度上的观测数据，包括采
-    样高度、速度谱宽、信噪比、径向速度。
+    return dataset
+
+
+def parse_data(pfn):
+    '''
+    该函数用于读取风廓线雷达产品数据（OBS）
 
     实时采样高度（ROBS）
     风廓线雷达实时的采样高度上的产品数据文件包括两部分内容，一部分是参考信息即测站基本参
@@ -53,71 +73,14 @@ def read(pfn, mod='ROBS'):
     -------
     pfn : `string`
         路径文件名
-    mod : `string`
-        读取模式，可选参数为'ROBS'、'RAD'，默认值为'ROBS'
 
     返回值
     -----
     data_dict : `dictionary`
         读取的数据字典
-
-            若 mod = 'ROBS'，则返回值为1个字典
-                其键值对结构为        `string`:`list`
-
-            若 mod = 'RAD'， 则返回值最多为3个字典，字典内嵌3层字典，
-                最底层键值对结构为    `string`:`list`
-                其余层键值对结构为    `string`:`dictionary`
-
-                层级结构如下所示
-
-                m1
-                |-- m1B1
-                |    |-- SH
-                |    |-- VSW
-                |    |-- SNR
-                |    |-- RV
-                ...
-                |-- m1B5
-                |    |-- SH
-                |    |-- VSW
-                |    |-- SNR
-                |    |-- RV
-
-                m2
-                |-- m2B1
-                |    |-- SH
-                |    |-- VSW
-                |    |-- SNR
-                |    |-- RV
-                ...
-                |-- m2B5
-                |    |-- SH
-                |    |-- VSW
-                |    |-- SNR
-                |    |-- RV
-
-                m3
-                |-- m3B1
-                |    |-- SH
-                |    |-- VSW
-                |    |-- SNR
-                |    |-- RV
-                ...
-                |-- m3B5
-                |    |-- SH
-                |    |-- VSW
-                |    |-- SNR
-                |    |-- RV
-
-            M : mod 雷达扫描模式，主要为高低模式
-            B : beam 波束序号
-
         变量名的解释
 
         SH : Sampling Height                    采样高度
-        VSW : Velocity Spectrum Width           速度谱宽
-        SNR : Signal to Noise Ratio             信噪比
-        RV : radial velocity                    径向速度
         HWD : Horizontal Wind Direction         水平风向（°）
         HWS : Horizontal Wind Speed             水平风速（m/s）
         VWS : Vertical Wind Speed               垂直风速（m/s）
@@ -128,115 +91,32 @@ def read(pfn, mod='ROBS'):
 
     示例
     ----
-    In [1]: from wprio import read
+    In [1]: from wprio import parse_data
 
-    # RAD模式
-    In [2]: radpath = './data/Z_RADA_I_51463_20180809000419_O_WPRD_LC_RAD.TXT'
+    In [2]: robspath = './data/Z_RADA_I_G7190_20180809234508_P_WPRD_LC_ROBS.TXT'
 
-    In [3]: m1, m2, m3 = read(radpath,mod='RAD')
+    In [3]: data = parse_data(robspath)
 
-    In [4]: list(m1.keys())
-    Out[4]: ['m1B1', 'm1B2', 'm1B3', 'm1B4', 'm1B5']
-
-    In [5]: list(m2.keys())
-    Out[5]: ['m2B1', 'm2B2', 'm2B3', 'm2B4', 'm2B5']
-
-    # ROBS模式
-    In [6]: robspath = './data/Z_RADA_I_G7190_20180809234508_P_WPRD_LC_ROBS.TXT'
-
-    In [7]: data = read(robspath,mod='ROBS')
-
-    In [8]: list(data.keys())
-    Out[8]: ['SH', 'HWD', 'HWS', 'VWS', 'HDR', 'VDR', 'CN2']
+    In [4]: list(data.keys())
+    Out[4]: ['SH', 'HWD', 'HWS', 'VWS', 'HDR', 'VDR', 'CN2']
     '''
-    def unformat(frag):
-        '''
-        片段内部数据反格式化解码
-        '''
-        result = {'SH': [], 'VSW': [], 'SNR': [], 'RV': []}
-        keys = ['SH', 'VSW', 'SNR', 'RV']
+    data_df = pd.read_csv(pfn, sep=' ', skiprows=3, skipfooter=1,
+                      names=['SH', 'HWD', 'HWS', 'VWS', 'HDR', 'VDR',
+                             'CN2'], engine='python')
 
-        for line in frag:
-            for i, k in enumerate(keys):
-                item = line.strip().split(' ')[i]
-                try:
-                    result[k].append(float(item))
-                except ValueError:
-                    result[k].append(None)
+    # 由于当文件中含有/////时会以字符串格式导入，因此把字符串格式转化为数字类型
+    # /////会被转换为 NaN
+    data_df = data_df.apply(pd.to_numeric, errors='coerce')
 
-        return result
+    # 把 NaN 类型转化为内建 None 类型，以便后期以null输出到json文件
+    data_df = data_df.where(pd.notnull(data_df), None)
 
-    if mod == 'ROBS':
-        data_df = pd.read_csv(pfn, sep=' ', skiprows=3, skipfooter=1,
-                          names=['SH', 'HWD', 'HWS', 'VWS', 'HDR', 'VDR',
-                                 'CN2'], engine='python')
-
-        # 由于当文件中含有/////时会以字符串格式导入，因此把字符串格式转化为数字类型
-        # /////会被转换为 NaN
-        data_df = data_df.apply(pd.to_numeric, errors='coerce')
-
-        # 把 NaN 类型转化为内建 None 类型，以便后期以null输出到json文件
-        data_df = data_df.where(pd.notnull(data_df), None)
-
-        data_dict = data_df.to_dict('list')
-        return data_dict
-
-    if mod == 'RAD':
-        with open(pfn, encoding='utf-8', errors='ignore') as fileobj:
-            content = fileobj.readlines()
-
-        # 提取每个片段的首尾索引值，并zip
-        frag_head = []
-        frag_tail = []
-        for index, line in enumerate(content):
-            if line.startswith('RAD'):
-                frag_head.append(index)
-            elif line.startswith('NNNN'):
-                frag_tail.append(index)
-        frag_index = zip(frag_head, frag_tail)
-
-        # 根据每个片段的首尾索引值提取主体数据
-        bodys = []
-        for frag in frag_index:
-            headn = frag[0]+1
-            tailn = frag[1]
-            bodys.append(unformat(content[headn:tailn]))
-
-        # 检查数据片段数是否为5、10或15，若不是则直接结束该次调用
-        try:
-            assert len(bodys) in [5, 10, 15]
-        except AssertionError:
-            return None, None, None
-
-        # 制作每个片段的键名
-        keys1 = ['m1B{0}'.format(b+1) for b in range(5)]
-        if len(bodys) == 10:
-            keys2 = ['m2B{0}'.format(b+1) for b in range(5)]
-        if len(bodys) == 15:
-            keys3 = ['m3B{0}'.format(b+1) for b in range(5)]
-
-        # 构建3种模式字典
-        m1_dict = {}
-        for index, key in enumerate(keys1):
-            m1_dict[key] = bodys[index]
-
-        m2_dict = None
-        m3_dict = None
-        if len(bodys) == 10:
-            m2_dict = {}
-            for index, key in enumerate(keys2):
-                m2_dict[key] = bodys[index+5]
-        elif len(bodys) == 15:
-            m3_dict = {}
-            for index, key in enumerate(keys3):
-                m3_dict[key] = bodys[index+10]
-
-        data_dict = m1_dict, m2_dict, m3_dict
+    data_dict = data_df.to_dict('list')
 
     return data_dict
 
 
-def head_info(pfn, mod='ROBS'):
+def parse_info(pfn):
     '''
     该函数用于读取雷达数据文件的头部信息，包括站号、经纬度、海拔高度、波段、时间。
 
@@ -251,6 +131,10 @@ def head_info(pfn, mod='ROBS'):
         包含该数据文件的站号（station）、经度（lon）、纬度（lat）、海拔高度（altitude）、
         波段（wave）、时间（time）的字典。
     '''
+    # 判断产品种类
+    with open(pfn,'r') as fileobj:
+        first_line = fileobj.readline()
+    kind = first_line.strip().split(' ')[0]
 
     def item_num(item):
         '''用于识别项索引位置'''
@@ -298,21 +182,17 @@ def head_info(pfn, mod='ROBS'):
     with open(pfn, encoding='utf-8', errors='ignore') as fileobj:
         content = fileobj.readlines()
 
-    if mod == 'ROBS':
-        items = content[1].strip().split(' ')
-        exist_items = [item for item in items if item]
+    items = content[1].strip().split(' ')
+    exist_items = [item for item in items if item]
 
-        # 用递归算法在缺失项插入None
-        expect_items = fill_miss(exist_items)
+    # 用递归算法在缺失项插入None
+    expect_items = fill_miss(exist_items)
 
-        stn, lon, lat, hgt, wav, time = expect_items
-
-    elif mod == 'RAD':
-        stn, lon, lat, hgt, wav = content[1].strip().split(' ')
-        time = content[3].split(' ')[1]
+    stn, lon, lat, hgt, wav, time = expect_items
 
     result = {'station': stn, 'lon': float(lon), 'lat': float(lat),
-              'altitude': float(hgt), 'wave': wav, 'time': time}
+              'altitude': float(hgt), 'wave': wav, 'time': time,
+              'type':kind}
 
     return result
 
