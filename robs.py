@@ -17,13 +17,13 @@ import time
 from datetime import datetime, timedelta
 import traceback
 
-from optools import gather_res, standard_time_index
-from optools import init_preset, save_preset, load_preset
-from optools import check_dir
-from optools import get_today_date, get_yesterday_date
-from optools import delay_when_today_dir_missing
-from optools import delay_when_data_dir_empty
-from wprio import parse, save_as_json
+from opr.optools import gather_res, standard_time_index
+from opr.optools import init_preset, save_preset, load_preset
+from opr.optools import check_dir
+from opr.optools import get_today_date, get_yesterday_date
+from opr.optools import delay_when_today_dir_missing
+from opr.optools import delay_when_data_dir_empty
+from algom.wprio import parse, save_as_json
 import ipdb
 
 from sys import argv
@@ -31,9 +31,9 @@ from sys import argv
 try:
     test_flag = argv[1]
 except IndexError:
-    LOG_PATH = './log/'
+    LOG_PATH = '/mnt/data14/liwt/opr_record/log/'
     SAVE_PATH = '/mnt/data14/liwt/output/WPR/'
-    PRESET_PATH = './preset/'
+    PRESET_PATH = '/mnt/data14/liwt/opr_record/preset/'
 else:
     if test_flag == 'test':
         LOG_PATH = '/mnt/data14/liwt/test/log/'
@@ -49,7 +49,7 @@ check_dir(SAVE_PATH)
 
 
 # 配置日志信息
-import log
+import opr.log as log
 logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
 
 
