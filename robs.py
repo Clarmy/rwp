@@ -17,15 +17,13 @@ import time
 from datetime import datetime, timedelta
 import traceback
 
-from preproc import proc_wrap
 from optools import gather_res, standard_time_index
 from optools import init_preset, save_preset, load_preset
 from optools import check_dir
 from optools import get_today_date, get_yesterday_date
 from optools import delay_when_today_dir_missing
 from optools import delay_when_data_dir_empty
-# from optools import is_initial
-from wprio import save_as_json
+from wprio import parse, save_as_json
 import ipdb
 
 from sys import argv
@@ -61,7 +59,7 @@ def gather_robs(res_pool, itime, root_path):
     result_list = []
     for file in res_pool[itime]:
         path_file = root_path + file
-        single_dict = proc_wrap(path_file)
+        single_dict = parse(path_file)
         if not single_dict:
             return None
         else:
