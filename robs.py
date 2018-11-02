@@ -7,8 +7,6 @@
 --------------------------------------------------------------------
 python = 3.6
 --------------------------------------------------------------------
- 李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
---------------------------------------------------------------------
 '''
 
 import os
@@ -26,22 +24,24 @@ from opr.optools import delay_when_data_dir_empty
 from algom.wprio import parse, save_as_json
 import ipdb
 
+with open('./config.json') as f:
+    config = js.load(f)
+
 from sys import argv
 
 try:
     test_flag = argv[1]
 except IndexError:
-    LOG_PATH = '/mnt/data14/liwt/opr_record/log/'
-    SAVE_PATH = '/mnt/data14/liwt/output/WPR/'
-    PRESET_PATH = '/mnt/data14/liwt/opr_record/preset/'
+    LOG_PATH = config['oper_log_path']
+    SAVE_PATH = config['oper_save_path']
+    PRESET_PATH = config['oper_preset_path']
 else:
     if test_flag == 'test':
-        LOG_PATH = '/mnt/data14/liwt/test/log/'
-        PRESET_PATH = '/mnt/data14/liwt/test/preset/'
-        SAVE_PATH = '/mnt/data14/liwt/test/output/'
+        LOG_PATH = config['test_log_path']
+        PRESET_PATH = config['test_preset_path']
+        SAVE_PATH = config['test_save_path']
     else:
-        print('Unkown flag')
-        exit()
+        raise ValueError('Unkown flag')
 
 check_dir(LOG_PATH)
 check_dir(PRESET_PATH)

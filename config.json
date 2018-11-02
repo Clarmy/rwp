@@ -1,0 +1,8 @@
+{
+  "oper_log_path":"/mnt/data14/liwt/opr_record/log/",
+  "oper_save_path":"/mnt/data14/liwt/output/WPR/",
+  "oper_preset_path":"/mnt/data14/liwt/opr_record/preset/",
+  "test_log_path":"/mnt/data14/liwt/test/log/",
+  "test_preset_path":"/mnt/data14/liwt/test/preset/",
+  "test_save_path":"/mnt/data14/liwt/test/output/"
+}
