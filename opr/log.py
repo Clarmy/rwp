@@ -7,15 +7,15 @@
 --------------------------------------------------------------------
 python = 3.6
 --------------------------------------------------------------------
- 李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
---------------------------------------------------------------------
 '''
 import logging
+import time
 from logging.handlers import TimedRotatingFileHandler
 
 def setup_custom_logger(log_path,name):
 
     formatter = logging.Formatter(fmt='%(asctime)s:%(message)s')
+    formatter.converter = time.gmtime
     handler = TimedRotatingFileHandler(log_path, when='midnight')
     handler.suffix = '%Y%m%d.log'
     handler.setFormatter(formatter)

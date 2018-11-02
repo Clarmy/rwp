@@ -7,8 +7,6 @@
 --------------------------------------------------------------------
 python = 3.6
 --------------------------------------------------------------------
- 李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
---------------------------------------------------------------------
 '''
 import os
 import pickle as pk
@@ -186,7 +184,7 @@ def is_timeout(time_index,LOG_PATH,threshold=420):
 
     if expect_time_index == time_index:
         # 若期望时次与当前时次相吻合则判断该时次是否超时
-        delt = datetime.now() - last_proc_time
+        delt = datetime.utcnow() - last_proc_time
         print(' delt seconds: {}'.format(delt.seconds))
         logger.info(' delt seconds: {}'.format(delt.seconds))
         if delt.seconds >= threshold:
