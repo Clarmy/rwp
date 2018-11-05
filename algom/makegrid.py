@@ -35,6 +35,8 @@ def get_attr_dict():
                         'units':'%'},
                  'VDR':{'long_name':'Vertical Direction Reliability',
                         'units':'%'},
+                 'CN2':{'long_name':' index of refraction structure function',
+                        'units':'None'},
                  'level':{'long_name':'Sampling Height level',
                         'units':'m'},
                  'lon':{'long_name':'longitudes','units':'degree_east'},
@@ -126,7 +128,7 @@ def multi_station_vetcl_intp(raw_dataset):
 
 
 def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
-    'VDR', 'CN2'],savepath=None,method='linear'):
+    'VDR', 'CN2'],method='cubic',savepath=None):
     '''在单个站点垂直插值的基础上对所有站点所有层次进行插值处理
 
     输入参数
@@ -154,6 +156,48 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
         time_obj = datetime.datetime(yyyy,mm,dd,HH,MM)
         time_units = 'minutes since 2018-01-01 00:00:00'
         return nc.date2num(time_obj,time_units)
+
+    def refill_negative(data_array):
+        '''剔除负值'''
+        for ny, r in enumerate(data_array):
+            for nx, c in enumerate(r):
+                if c < 0:
+                    data_array[ny][nx] = 0
+        return data_array
+
+    def nan_convert(array,to=None):
+        '''将字典数据中的nan替换成None'''
+        # for key in data_dict:
+        if type(array) == float:
+            return array
+        elif len(np.array(array).shape) == 3:
+            for nl, l in enumerate(array):
+                for ny, r in enumerate(l):
+                    for nx, c in enumerate(r):
+                        try:
+                            int(c)
+                        except:
+                            array[nl][ny][nx] = to
+        elif len(np.array(array).shape) == 1:
+            return array
+
+        return array
+
+    def save2json(data_dict,attr_dict,savepath):
+        '''保存为json文件'''
+        from json import dumps
+
+        dataset = {}
+        for key in data_dict:
+            # data_array = nan_convert(data_dict[key])
+            try:
+                data_list = nan_convert(data_dict[key].tolist())
+            except AttributeError:
+                pass
+            dataset[key] = {'data':data_list,'attribute':attr_dict[key]}
+        js_str = js.dumps(dataset)
+        with open(savepath,'w') as f:
+            f.write(js_str)
 
     dataset = multi_station_vetcl_intp(load_js(pfn))
     sh = std_sh()
@@ -190,6 +234,15 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
 
             values = np.array(values)
             grds = griddata((lon,lat),values,(grd_lons,grd_lats),method=method)
+
+            # issue1 here
+            grds = nan_convert(grds,to=-9999)
+
+            # 在cubic算法下，水平风速会被插值出负值
+            # 这时候需要对负值进行剔除，按0值处理
+            if varkey == 'HWS':
+                grds = refill_negative(grds)
+
             multigrds.append(grds)
             data_dict[varkey] = np.array(multigrds)
 
@@ -201,8 +254,12 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
     attr_dict = get_attr_dict()
 
     if savepath:
-        save_as_nc(data_dict,attr_dict,savepath)
-        return None
+        if savepath.endswith('.nc'):
+            save_as_nc(data_dict,attr_dict,savepath)
+            return None
+        elif savepath.endswith('.json'):
+            save2json(data_dict,attr_dict,savepath)
+            return None
     else:
         return data_dict,attr_dict
 
