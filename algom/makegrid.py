@@ -126,7 +126,7 @@ def multi_station_vetcl_intp(raw_dataset):
 
 
 def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
-    'VDR', 'CN2'],savepath=None):
+    'VDR', 'CN2'],savepath=None,method='linear'):
     '''在单个站点垂直插值的基础上对所有站点所有层次进行插值处理
 
     输入参数
@@ -188,7 +188,8 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
             lon = np.array(lon)
             lat = np.array(lat)
 
-            grds = griddata((lon,lat),values,(grd_lons,grd_lats),method='linear')
+            values = np.array(values)
+            grds = griddata((lon,lat),values,(grd_lons,grd_lats),method=method)
             multigrds.append(grds)
             data_dict[varkey] = np.array(multigrds)
 
