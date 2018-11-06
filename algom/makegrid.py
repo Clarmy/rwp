@@ -251,7 +251,11 @@ def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
             lat = np.array(lat)
 
             values = np.array(values)
-            grds = griddata((lon,lat),values,(grd_lons,grd_lats),method=method)
+            try:
+                grds = griddata((lon,lat),values,(grd_lons,grd_lats),
+                                method=method)
+            except:
+                grds = np.full(grd_lons.shape,np.nan)
 
             # issue1 here
             grds = nan_convert(grds,to=-9999)
@@ -279,8 +283,8 @@ def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
             save2json(data_dict,attr_dict,attr,savepath)
             return None
         else:
-            raise OutputError('File type Error. Only support file types of'\
-                              ' .nc and .json.')
+            raise OutputError('Saving file type Error. Only support file types'\
+                              ' of .nc and .json.')
     else:
         return data_dict,attr_dict
 
