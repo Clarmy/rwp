@@ -1,15 +1,13 @@
 # coding:utf-8
 '''
 --------------------------------------------------------------------
-项目名：wpr
+项目名：rwp
 模块名：makegrid
 本模块用于对不规则站点数据进行格点化插值处理
 --------------------------------------------------------------------
 python = 3.6
 依赖库：
     netCDF4       $ conda install netCDF4
---------------------------------------------------------------------
- 李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
 --------------------------------------------------------------------
 '''
 
@@ -22,6 +20,12 @@ from scipy.interpolate import griddata, interp1d
 from algom.wprio import save_as_nc, load_js
 import datetime
 import ipdb
+
+
+class OutputError(Exception):
+    '''输出错误'''
+    def __init__(self, message):
+        self.message = message
 
 
 def get_attr_dict():
@@ -56,7 +60,7 @@ def std_sh():
     return sh
 
 
-def veticl_interpolate(single_ds):
+def v_interp(single_ds):
     '''垂直插值单站数据集
 
     输入参数
@@ -111,7 +115,7 @@ def veticl_interpolate(single_ds):
     return new_single_ds
 
 
-def multi_station_vetcl_intp(raw_dataset):
+def multi_v_interp(raw_dataset):
     '''多站（全数据集）垂直积分
 
     输入参数
@@ -124,11 +128,11 @@ def multi_station_vetcl_intp(raw_dataset):
     `list`
         经插值处理后的多站数据列表
     '''
-    return [veticl_interpolate(line) for line in raw_dataset]
+    return [v_interp(line) for line in raw_dataset]
 
 
-def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
-    'VDR', 'CN2'],method='cubic',savepath=None):
+def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
+    'VDR', 'CN2'], method='cubic', attr=False, savepath=None):
     '''在单个站点垂直插值的基础上对所有站点所有层次进行插值处理
 
     输入参数
@@ -137,14 +141,25 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
         多站数据列表，单行是单站数据（字典格式）
     varkeys : `list`
         变量名列表
+    method : `str`
+        插值方法选择，可供选择的选项有'linear','nearest','cubic'，默认为'cubic'
+    attr : `bool`
+        在保存文件为json格式时生效的判断参数，该参数指示是否保存变量属性，若了False则输出文件
+        只保存数据而不保存属性，若为True则也保存属性
     savepath : `str`
         保存路径，默认为None，若为None则返回数据字典和属性字典，若不为None则保存文件且函数
         无返回值。
 
     返回值
     -----
-    `ndarray`
+    `None` | 'tuple' : 如果设置了savepath参数，则函数根据savepath保存文件并返回None，
+                       如果savepath参数为None，则函数返回一个由两个字典组成的元组，其结构
+                       为(data_dict,attr_dict)，其中data_dict是数据字典，attr_dict是
+                       属性字典
 
+    错误
+    ---
+    OutputError : 当参数savepath不以'.json'或'.nc'结尾时抛出
     '''
     def get_datetime(pfn):
         timestr = pfn.split('/')[-1].split('.')[0]
@@ -183,7 +198,7 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
 
         return array
 
-    def save2json(data_dict,attr_dict,savepath):
+    def save2json(data_dict,attr_dict,attr,savepath):
         '''保存为json文件'''
         from json import dumps
 
@@ -194,12 +209,15 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
                 data_list = nan_convert(data_dict[key].tolist())
             except AttributeError:
                 pass
-            dataset[key] = {'data':data_list,'attribute':attr_dict[key]}
+            if attr == True:
+                dataset[key] = {'data':data_list,'attribute':attr_dict[key]}
+            else:
+                dataset[key] = data_list
         js_str = js.dumps(dataset)
         with open(savepath,'w') as f:
             f.write(js_str)
 
-    dataset = multi_station_vetcl_intp(load_js(pfn))
+    dataset = multi_v_interp(load_js(pfn))
     sh = std_sh()
 
     min_lon = 85
@@ -258,8 +276,11 @@ def complete_interpolate(pfn,varkeys=['HWD', 'HWS', 'VWS', 'HDR',
             save_as_nc(data_dict,attr_dict,savepath)
             return None
         elif savepath.endswith('.json'):
-            save2json(data_dict,attr_dict,savepath)
+            save2json(data_dict,attr_dict,attr,savepath)
             return None
+        else:
+            raise OutputError('File type Error. Only support file types of'\
+                              ' .nc and .json.')
     else:
         return data_dict,attr_dict
 
