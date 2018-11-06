@@ -15,6 +15,7 @@ import time
 from datetime import datetime, timedelta
 import traceback
 
+
 from opr.optools import gather_res, standard_time_index
 from opr.optools import init_preset, save_preset, load_preset
 from opr.optools import check_dir
@@ -22,7 +23,6 @@ from opr.optools import get_today_date, get_yesterday_date
 from opr.optools import delay_when_today_dir_missing
 from opr.optools import delay_when_data_dir_empty
 from algom.wprio import parse, save_as_json
-import ipdb
 
 with open('./config.json') as f:
     config = js.load(f)
@@ -32,14 +32,14 @@ from sys import argv
 try:
     test_flag = argv[1]
 except IndexError:
-    LOG_PATH = config['oper_log_path']
-    SAVE_PATH = config['oper_save_path']
-    PRESET_PATH = config['oper_preset_path']
+    LOG_PATH = config['parse']['oper']['log_path']
+    SAVE_PATH = config['parse']['oper']['save_path']
+    PRESET_PATH = config['parse']['oper']['preset_path']
 else:
     if test_flag == 'test':
-        LOG_PATH = config['test_log_path']
-        PRESET_PATH = config['test_preset_path']
-        SAVE_PATH = config['test_save_path']
+        LOG_PATH = config['parse']['test']['log_path']
+        PRESET_PATH = config['parse']['test']['preset_path']
+        SAVE_PATH = config['parse']['test']['save_path']
     else:
         raise ValueError('Unkown flag')
 
@@ -172,5 +172,5 @@ def main(rootpath, outpath):
 
 
 if __name__ == '__main__':
-    ROOT_PATH = '/mnt/data3/REALTIME_DATA/cmadata/RADR/WPRD/ROBS/'
+    ROOT_PATH = config['data_source']
     main(ROOT_PATH, SAVE_PATH)

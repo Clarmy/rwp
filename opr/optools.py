@@ -230,7 +230,7 @@ def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
     # 删除该时次重复的站
     res_dict = drop_duplicate_station(res_dict)
 
-    # 不超时（7分钟以内）情况下到站不全(小于70个站点）的时次予以保留
+    # 不超时（7分钟以内）情况下到站不全(小于69个站点）的时次予以保留
     to_remove = set([])
     for time_index in res_dict:
         if time_index in index_preset:
@@ -283,7 +283,7 @@ def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
     return result
 
 
-def is_station_enough(res_pool, timestr, threshold=70):
+def is_station_enough(res_pool, timestr, threshold=69):
     '''判断文件源池中指定时次的站点数是否足够'''
     num = len(res_pool[timestr])
     print('{0}’s station num: {1}'.format(timestr, num))

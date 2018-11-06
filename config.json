@@ -1,8 +1,34 @@
 {
-  "oper_log_path":"/mnt/data14/liwt/opr_record/log/",
-  "oper_save_path":"/mnt/data14/liwt/output/WPR/",
-  "oper_preset_path":"/mnt/data14/liwt/opr_record/preset/",
-  "test_log_path":"/mnt/data14/liwt/test/log/",
-  "test_preset_path":"/mnt/data14/liwt/test/preset/",
-  "test_save_path":"/mnt/data14/liwt/test/output/"
+  "data_source":"/mnt/data3/REALTIME_DATA/cmadata/RADR/WPRD/ROBS/",
+  "parse":
+  {
+    "oper":
+    {
+      "log_path":"/mnt/data14/liwt/opr/parse/log/",
+      "save_path":"/mnt/data14/liwt/opr/parse/product/",
+      "preset_path":"/mnt/data14/liwt/opr/parse/preset/"
+    },
+    "test":
+    {
+      "log_path":"/mnt/data14/liwt/test/parse/log/",
+      "save_path":"/mnt/data14/liwt/test/parse/product/",
+      "preset_path":"/mnt/data14/liwt/test/parse/preset/"
+    }
+
+  },
+  "mkgrd":
+  {
+    "oper":
+    {
+      "log_path":"/mnt/data14/liwt/opr/mkgrd/log/",
+      "save_path":"/mnt/data14/liwt/opr/mkgrd/product/",
+      "preset_path":"/mnt/data14/liwt/opr/mkgrd/preset/"
+    },
+    "test":
+    {
+      "log_path":"/mnt/data14/liwt/test/mkgrd/log/",
+      "save_path":"/mnt/data14/liwt/test/mkgrd/product/",
+      "preset_path":"/mnt/data14/liwt/test/mkgrd/preset/"
+    }
+  }
 }
