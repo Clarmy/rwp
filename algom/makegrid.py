@@ -29,25 +29,27 @@ class OutputError(Exception):
 
 
 def get_attr_dict():
-    attr_dict = {'HWD':{'long_name':'Horizontal Wind Direction',
-                        'units':'degree'},
-                 'HWS':{'long_name':'Horizontal Wind Speed',
+    attr_dict = {'U':{'long_name':'U component of wind.',
+                        'units':'m/s'},
+                 'V':{'long_name':'V component of wind.',
                         'units':'m/s'},
                  'VWS':{'long_name':'Vertical Wind Speed',
                         'units':'m/s'},
-                 'HDR':{'long_name':'Horizontal Direction Reliability',
-                        'units':'%'},
-                 'VDR':{'long_name':'Vertical Direction Reliability',
-                        'units':'%'},
-                 'CN2':{'long_name':' index of refraction structure function',
-                        'units':'None'},
-                 'level':{'long_name':'Sampling Height level',
+                 'level':{'long_name':'Sampling height level',
                         'units':'m'},
                  'lon':{'long_name':'longitudes','units':'degree_east'},
                  'lat':{'long_name':'latitudes','units':'degree_north'},
                  'time':{'long_name':'datetime',
                          'units':'minutes since 2018-01-01 00:00:00'}}
     return attr_dict
+
+
+def sd2uv(ws,wd):
+    '''风速风向转化为uv场'''
+    u = ws * np.sin((wd/360)*2*np.pi)
+    v = ws * np.cos((wd/360)*2*np.pi)
+
+    return u,v
 
 
 def std_sh():
@@ -131,16 +133,13 @@ def multi_v_interp(raw_dataset):
     return [v_interp(line) for line in raw_dataset]
 
 
-def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
-    'VDR', 'CN2'], method='cubic', attr=False, savepath=None):
+def full_interp(pfn, method='cubic', attr=False, savepath=None):
     '''在单个站点垂直插值的基础上对所有站点所有层次进行插值处理
 
     输入参数
     -------
     pfn : `str`
         多站数据列表，单行是单站数据（字典格式）
-    varkeys : `list`
-        变量名列表
     method : `str`
         插值方法选择，可供选择的选项有'linear','nearest','cubic'，默认为'cubic'
     attr : `bool`
@@ -172,6 +171,7 @@ def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
         time_units = 'minutes since 2018-01-01 00:00:00'
         return nc.date2num(time_obj,time_units)
 
+
     def refill_negative(data_array):
         '''剔除负值'''
         for ny, r in enumerate(data_array):
@@ -179,6 +179,7 @@ def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
                 if c < 0:
                     data_array[ny][nx] = 0
         return data_array
+
 
     def nan_convert(array,to=None):
         '''将字典数据中的nan替换成None'''
@@ -197,6 +198,7 @@ def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
             return array
 
         return array
+
 
     def save2json(data_dict,attr_dict,attr,savepath):
         '''保存为json文件'''
@@ -217,6 +219,7 @@ def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
         with open(savepath,'w') as f:
             f.write(js_str)
 
+
     dataset = multi_v_interp(load_js(pfn))
     sh = std_sh()
 
@@ -229,45 +232,89 @@ def full_interp(pfn, varkeys=['HWD', 'HWS', 'VWS', 'HDR',
     grd_lons, grd_lats = np.meshgrid(grd_lon,grd_lat)
 
     data_dict = {}
-    for varkey in varkeys:
-        multigrds = []
-        for height in sh:
-            sh_index = sh.index(height)
-            lon = []
-            lat = []
-            values = []
+    # for varkey in varkdeys:
+    multi_u_grds = []
+    multi_v_grds = []
+    multi_vws_grds = []
+    for height in sh:
+        sh_index = sh.index(height)
 
-            for line in dataset:
-                try:
-                    int(line[varkey][sh_index])
-                except ValueError:
-                    continue
-                else:
-                    lon.append(line['lon'])
-                    lat.append(line['lat'])
-                    values.append(line[varkey][sh_index])
+        hwd = []
+        hws = []
+        hz_lon = []
+        hz_lat = []
 
-            lon = np.array(lon)
-            lat = np.array(lat)
+        vws = []
+        vt_lon = []
+        vt_lat = []
 
-            values = np.array(values)
+        for line in dataset:
             try:
-                grds = griddata((lon,lat),values,(grd_lons,grd_lats),
-                                method=method)
-            except:
-                grds = np.full(grd_lons.shape,np.nan)
+                int(line['HWD'][sh_index])
+                int(line['HWS'][sh_index])
+            except ValueError:
+                continue
+            else:
+                hws.append(line['HWS'][sh_index])
+                hwd.append(line['HWD'][sh_index])
+                hz_lon.append(line['lon'])
+                hz_lat.append(line['lat'])
 
-            # issue1 here
-            grds = nan_convert(grds,to=-9999)
+            try:
+                int(line['VWS'][sh_index])
+            except ValueError:
+                continue
+            else:
+                vws.append(line['VWS'][sh_index])
+                vt_lon.append(line['lon'])
+                vt_lat.append(line['lat'])
 
-            # 在cubic算法下，水平风速会被插值出负值
-            # 这时候需要对负值进行剔除，按0值处理
-            if varkey == 'HWS':
-                grds = refill_negative(grds)
+        hz_lon = np.array(hz_lon)
+        hz_lat = np.array(hz_lat)
 
-            multigrds.append(grds)
-            data_dict[varkey] = np.array(multigrds)
+        vt_lon = np.array(vt_lon)
+        vt_lat = np.array(vt_lat)
 
+        hwd = np.array(hwd,dtype=np.float64)
+        hws = np.array(hws,dtype=np.float64)
+        vws = np.array(vws,dtype=np.float64)
+
+        u,v = sd2uv(hws,hwd)
+
+        # 风的来向与去向转换
+        u = -u
+        v = -v
+
+        try:
+            u_grds = griddata((hz_lon,hz_lat),u,(grd_lons,grd_lats),
+                            method=method)
+        except:
+            u_grds = np.full(grd_lons.shape,np.nan)
+            # import ipdb
+            # ipdb.set_trace()
+        try:
+            v_grds = griddata((hz_lon,hz_lat),v,(grd_lons,grd_lats),
+                            method=method)
+        except:
+            v_grds = np.full(grd_lons.shape,np.nan)
+        try:
+            vws_grds = griddata((vt_lon,vt_lat),vws,(grd_lons,grd_lats),
+                            method=method)
+        except:
+            vws_grds = np.full(grd_lons.shape,np.nan)
+
+        # issue1 here
+        u_grds = nan_convert(u_grds,to=-9999)
+        v_grds = nan_convert(v_grds,to=-9999)
+        vws_grds = nan_convert(vws_grds,to=-9999)
+
+        multi_u_grds.append(u_grds)
+        multi_v_grds.append(v_grds)
+        multi_vws_grds.append(vws_grds)
+
+    data_dict['U'] = np.array(multi_u_grds,dtype=np.float64)
+    data_dict['V'] = np.array(multi_v_grds,dtype=np.float64)
+    data_dict['VWS'] = np.array(multi_vws_grds,dtype=np.float64)
     data_dict['lon'] = grd_lon
     data_dict['lat'] = grd_lat
     data_dict['level'] = np.array(sh)
