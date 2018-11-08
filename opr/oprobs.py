@@ -9,6 +9,10 @@ python = 3.6
 --------------------------------------------------------------------
 '''
 
+import sys
+
+sys.path.append('..')
+
 import os
 import json as js
 import time
@@ -23,7 +27,7 @@ from opr.optools import delay_when_today_dir_missing
 from opr.optools import delay_when_data_dir_empty
 from algom.wprio import parse, save_as_json
 
-with open('./config.json') as f:
+with open('../config.json') as f:
     config = js.load(f)
 
 from sys import argv
