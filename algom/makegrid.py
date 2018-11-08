@@ -19,7 +19,6 @@ import netCDF4 as nc
 from scipy.interpolate import griddata, interp1d
 from algom.wprio import save_as_nc, load_js
 import datetime
-import ipdb
 
 
 class OutputError(Exception):
@@ -30,13 +29,24 @@ class OutputError(Exception):
 
 def get_attr_dict():
     attr_dict = {'U':{'long_name':'U component of wind.',
-                        'units':'m/s'},
+                        'units':'m/s',
+                        'note':'U and V\'s direction is that wind blows to,'\
+                        ' rather than wind comes from.' },
                  'V':{'long_name':'V component of wind.',
-                        'units':'m/s'},
+                        'units':'m/s',
+                        'note':'U and V\'s direction is that wind blows to,'\
+                        ' rather than wind comes from.'},
                  'VWS':{'long_name':'Vertical Wind Speed',
-                        'units':'m/s'},
+                        'units':'m/s',
+                        'note':'Positive is downward, negative is upward.'},
                  'level':{'long_name':'Sampling height level',
                         'units':'m'},
+                 'HWS':{'long_name':'Horizontal Wind Speed',
+                        'units':'m/s'},
+                 'HWD':{'long_name':'Horizontal Wind Direction',
+                        'units':'degree',
+                        'note':'Values increase clockwise from north. '\
+                        'The value denotes the direction that wind comes from.'},
                  'lon':{'long_name':'longitudes','units':'degree_east'},
                  'lat':{'long_name':'latitudes','units':'degree_north'},
                  'time':{'long_name':'datetime',
@@ -46,8 +56,8 @@ def get_attr_dict():
 
 def sd2uv(ws,wd):
     '''风速风向转化为uv场'''
-    u = ws * np.sin((wd/360)*2*np.pi)
-    v = ws * np.cos((wd/360)*2*np.pi)
+    u = ws * np.sin(np.deg2rad(wd))
+    v = ws * np.cos(np.deg2rad(wd))
 
     return u,v
 
@@ -133,7 +143,7 @@ def multi_v_interp(raw_dataset):
     return [v_interp(line) for line in raw_dataset]
 
 
-def full_interp(pfn, method='cubic', attr=False, savepath=None):
+def full_interp(pfn, method='linear', attr=False, savepath=None):
     '''在单个站点垂直插值的基础上对所有站点所有层次进行插值处理
 
     输入参数
@@ -170,15 +180,6 @@ def full_interp(pfn, method='cubic', attr=False, savepath=None):
         time_obj = datetime.datetime(yyyy,mm,dd,HH,MM)
         time_units = 'minutes since 2018-01-01 00:00:00'
         return nc.date2num(time_obj,time_units)
-
-
-    def refill_negative(data_array):
-        '''剔除负值'''
-        for ny, r in enumerate(data_array):
-            for nx, c in enumerate(r):
-                if c < 0:
-                    data_array[ny][nx] = 0
-        return data_array
 
 
     def nan_convert(array,to=None):
@@ -235,6 +236,8 @@ def full_interp(pfn, method='cubic', attr=False, savepath=None):
     # for varkey in varkdeys:
     multi_u_grds = []
     multi_v_grds = []
+    multi_hws_grds = []
+    multi_hwd_grds = []
     multi_vws_grds = []
     for height in sh:
         sh_index = sh.index(height)
@@ -281,17 +284,11 @@ def full_interp(pfn, method='cubic', attr=False, savepath=None):
 
         u,v = sd2uv(hws,hwd)
 
-        # 风的来向与去向转换
-        u = -u
-        v = -v
-
         try:
             u_grds = griddata((hz_lon,hz_lat),u,(grd_lons,grd_lats),
                             method=method)
         except:
             u_grds = np.full(grd_lons.shape,np.nan)
-            # import ipdb
-            # ipdb.set_trace()
         try:
             v_grds = griddata((hz_lon,hz_lat),v,(grd_lons,grd_lats),
                             method=method)
@@ -303,18 +300,31 @@ def full_interp(pfn, method='cubic', attr=False, savepath=None):
         except:
             vws_grds = np.full(grd_lons.shape,np.nan)
 
+        hws_grds = np.sqrt(u_grds**2 + v_grds**2)
+        hwd_grds = np.rad2deg(np.arcsin(u_grds/hws_grds))
+
+        # 风的来向与去向转换
+        u_grds = -u_grds
+        v_grds = -v_grds
+
         # issue1 here
-        u_grds = nan_convert(u_grds,to=-9999)
-        v_grds = nan_convert(v_grds,to=-9999)
-        vws_grds = nan_convert(vws_grds,to=-9999)
+        u_grds = np.ma.masked_invalid(u_grds)
+        v_grds = np.ma.masked_invalid(v_grds)
+        hws_grds = np.ma.masked_invalid(hws_grds)
+        hwd_grds = np.ma.masked_invalid(hwd_grds)
+        vws_grds = np.ma.masked_invalid(vws_grds)
 
         multi_u_grds.append(u_grds)
         multi_v_grds.append(v_grds)
         multi_vws_grds.append(vws_grds)
+        multi_hws_grds.append(hws_grds)
+        multi_hwd_grds.append(hwd_grds)
 
-    data_dict['U'] = np.array(multi_u_grds,dtype=np.float64)
-    data_dict['V'] = np.array(multi_v_grds,dtype=np.float64)
-    data_dict['VWS'] = np.array(multi_vws_grds,dtype=np.float64)
+    data_dict['U'] = np.ma.array(multi_u_grds,dtype=np.float64)
+    data_dict['V'] = np.ma.array(multi_v_grds,dtype=np.float64)
+    data_dict['VWS'] = np.ma.array(multi_vws_grds,dtype=np.float64)
+    data_dict['HWS'] = np.ma.array(multi_hws_grds,dtype=np.float64)
+    data_dict['HWD'] = np.ma.array(multi_hwd_grds,dtype=np.float64)
     data_dict['lon'] = grd_lon
     data_dict['lat'] = grd_lat
     data_dict['level'] = np.array(sh)
