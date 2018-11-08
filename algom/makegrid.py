@@ -19,7 +19,7 @@ import json as js
 import numpy as np
 import netCDF4 as nc
 from scipy.interpolate import griddata, interp1d
-from algom.wprio import save_as_nc, load_js
+from algom.io import save_as_nc, load_js
 import datetime
 
 
