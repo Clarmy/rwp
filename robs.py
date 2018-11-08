@@ -15,7 +15,6 @@ import time
 from datetime import datetime, timedelta
 import traceback
 
-
 from opr.optools import gather_res, standard_time_index
 from opr.optools import init_preset, save_preset, load_preset
 from opr.optools import check_dir

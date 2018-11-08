@@ -49,7 +49,7 @@ logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
 
 
 def main(rootpath, outpath):
-    # previous_folds = set(os.listdir(rootpath))
+
     STD_INDEX = standard_time_index()
     STD_FILENAMES = [ntime + '.json' for ntime in STD_INDEX]
 
@@ -57,9 +57,6 @@ def main(rootpath, outpath):
         folds = os.listdir(rootpath)
         folds.sort()
         fold = folds[-1]
-
-        # print('last fold: {}'.format(fold))
-        # logger.info('last fold: {}'.format(fold))
 
         foldpath = rootpath+fold+'/'
         files = os.listdir(foldpath)
@@ -83,7 +80,6 @@ def main(rootpath, outpath):
         print('dir {0} has no new file'.format(fold))
         logger.info('dir {0} has no new file'.format(fold))
         time.sleep(10)
-        # previous_folds = now_folds
 
 
 if __name__ == '__main__':

@@ -10,8 +10,6 @@ python = 3.6
     pandas        $ conda install pandas
     netCDF4       $ conda install netCDF4
 --------------------------------------------------------------------
- 李文韬   |   liwentao@mail.iap.ac.cn   |   https://github.com/Clarmy
---------------------------------------------------------------------
 '''
 import json as js
 import pandas as pd
