@@ -15,7 +15,6 @@ import json as js
 import pandas as pd
 import netCDF4 as nc
 import datetime
-import pdb
 
 
 def load_js(filepath):
