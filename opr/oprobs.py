@@ -25,7 +25,7 @@ from opr.optools import check_dir
 from opr.optools import get_today_date, get_yesterday_date
 from opr.optools import delay_when_today_dir_missing
 from opr.optools import delay_when_data_dir_empty
-from algom.wprio import parse, save_as_json
+from algom.io import parse, save_as_json
 
 with open('../config.json') as f:
     config = js.load(f)
