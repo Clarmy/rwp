@@ -17,14 +17,36 @@ import netCDF4 as nc
 import datetime
 
 
-def load_js(filepath):
-    '''加载json数据'''
+def load_js(filepath,exclude=['57494']):
+    '''加载json数据
+
+    输入参数
+    -------
+    filepath : `str`
+        文件路径
+    exclude : `list`
+        剔除列表
+
+    返回值
+    -----
+    `list` : 加载剔除后的数据集
+    '''
+
+    def expel(dataset,exclude):
+        new_dataset = []
+        for line in dataset:
+            if not line['station'] in exclude:
+                new_dataset.append(line)
+        return new_dataset
+
     with open(filepath) as file_obj:
         raw_content = file_obj.readlines()
 
-    data = [js.loads(line) for line in raw_content]
+    dataset = [js.loads(line) for line in raw_content]
 
-    return data
+    dataset = expel(dataset,exclude)
+
+    return dataset
 
 
 def parse(pfn):
