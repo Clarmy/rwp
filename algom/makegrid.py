@@ -19,14 +19,9 @@ import json as js
 import numpy as np
 import netCDF4 as nc
 from scipy.interpolate import griddata, interp1d
-from algom.io import save_as_nc, load_js
+from algom.io import save_as_nc, load_js, OutputError
 import datetime
 
-
-class OutputError(Exception):
-    '''输出错误'''
-    def __init__(self, message):
-        self.message = message
 
 def nan2num(arr,fill_value):
     '''将np.nan转化为特定数字'''
