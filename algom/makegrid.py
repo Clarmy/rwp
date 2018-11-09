@@ -12,9 +12,9 @@ python = 3.6
     scipy         $ conda install scipy
 --------------------------------------------------------------------
 '''
-
 import sys
 sys.path.append('..')
+
 import json as js
 import numpy as np
 import netCDF4 as nc
@@ -28,25 +28,35 @@ class OutputError(Exception):
     def __init__(self, message):
         self.message = message
 
+def nan2num(arr,fill_value):
+    '''将np.nan转化为特定数字'''
+    where_is_nan = np.isnan(arr)
+    arr[where_is_nan] = fill_value
+    return arr
 
 def get_attr_dict():
     attr_dict = {'U':{'long_name':'U component of wind.',
                         'units':'m/s',
+                        'fill_value':-9999.,
                         'note':'U and V\'s direction is that wind blows to,'\
                         ' rather than wind comes from.' },
                  'V':{'long_name':'V component of wind.',
                         'units':'m/s',
+                        'fill_value':-9999.,
                         'note':'U and V\'s direction is that wind blows to,'\
                         ' rather than wind comes from.'},
                  'VWS':{'long_name':'Vertical Wind Speed',
                         'units':'m/s',
+                        'fill_value':-9999,
                         'note':'Positive is downward, negative is upward.'},
                  'level':{'long_name':'Sampling height level',
                         'units':'m'},
                  'HWS':{'long_name':'Horizontal Wind Speed',
-                        'units':'m/s'},
+                        'units':'m/s',
+                        'fill_value':-9999},
                  'HWD':{'long_name':'Horizontal Wind Direction',
                         'units':'degree',
+                        'fill_value':-9999,
                         'note':'Values increase clockwise from north. '\
                         'The value denotes the direction that wind comes from.'},
                  'lon':{'long_name':'longitudes','units':'degree_east'},
@@ -309,12 +319,12 @@ def full_interp(pfn, method='linear', attr=False, savepath=None):
         u_grds = -u_grds
         v_grds = -v_grds
 
-        # issue1 here
-        u_grds = np.ma.masked_invalid(u_grds)
-        v_grds = np.ma.masked_invalid(v_grds)
-        hws_grds = np.ma.masked_invalid(hws_grds)
-        hwd_grds = np.ma.masked_invalid(hwd_grds)
-        vws_grds = np.ma.masked_invalid(vws_grds)
+        # 把nan转化为缺省值-9999.
+        u_grds = nan2num(u_grds,-9999)
+        v_grds = nan2num(v_grds,-9999)
+        hws_grds = nan2num(hws_grds,-9999)
+        hwd_grds = nan2num(hwd_grds,-9999)
+        vws_grds = nan2num(vws_grds,-9999)
 
         multi_u_grds.append(u_grds)
         multi_v_grds.append(v_grds)
@@ -322,11 +332,11 @@ def full_interp(pfn, method='linear', attr=False, savepath=None):
         multi_hws_grds.append(hws_grds)
         multi_hwd_grds.append(hwd_grds)
 
-    data_dict['U'] = np.ma.array(multi_u_grds,dtype=np.float64)
-    data_dict['V'] = np.ma.array(multi_v_grds,dtype=np.float64)
-    data_dict['VWS'] = np.ma.array(multi_vws_grds,dtype=np.float64)
-    data_dict['HWS'] = np.ma.array(multi_hws_grds,dtype=np.float64)
-    data_dict['HWD'] = np.ma.array(multi_hwd_grds,dtype=np.float64)
+    data_dict['U'] = np.array(multi_u_grds,dtype=np.float64)
+    data_dict['V'] = np.array(multi_v_grds,dtype=np.float64)
+    data_dict['VWS'] = np.array(multi_vws_grds,dtype=np.float64)
+    data_dict['HWS'] = np.array(multi_hws_grds,dtype=np.float64)
+    data_dict['HWD'] = np.array(multi_hwd_grds,dtype=np.float64)
     data_dict['lon'] = grd_lon
     data_dict['lat'] = grd_lat
     data_dict['level'] = np.array(sh)
