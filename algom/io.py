@@ -351,7 +351,7 @@ def save_as_nc(data_dict, attr_dict, savepath):
     if dim_num == 3:
         src_level = data_dict['level']
 
-    with nc.Dataset(savepath, 'w') as file_obj:
+    with nc.Dataset(savepath, 'w', format='NETCDF3_CLASSIC') as file_obj:
 
         file_obj.createDimension('lon', len(src_lon))
         file_obj.createDimension('lat', len(src_lat))
