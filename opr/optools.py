@@ -129,9 +129,9 @@ def strftime_to_datetime(strftime):
     return datetime(year, month, day, hour, minute)
 
 
-def is_timeout(time_index,LOG_PATH,threshold=420):
+def is_timeout(time_index,LOG_PATH,threshold=360):
     '''判断是否超时
-    若当前时间与最后一次处理记录之间的时间差超过阈值（默认420秒）则判定超时，
+    若当前时间与最后一次处理记录之间的时间差超过阈值（默认360秒）则判定超时，
     若当前时刻滞后于所到文件时刻（收到了来自未来的文件），则最大时间阈值顺延10秒。
 
     输入参数
