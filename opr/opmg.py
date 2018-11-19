@@ -52,11 +52,19 @@ def main(rootpath, outpath):
 
     STD_INDEX = standard_time_index()
     STD_FILENAMES = [ntime + '.json' for ntime in STD_INDEX]
+    folds = os.listdir(rootpath)
+    folds.sort()
+    fold = folds[-1]
 
     while True:
-        folds = os.listdir(rootpath)
-        folds.sort()
-        fold = folds[-1]
+
+        # 如果STD_FILENAMES为空，则扫描新的文件夹，否则扫描原有文件夹
+        if not STD_FILENAMES:
+            STD_INDEX = standard_time_index()
+            STD_FILENAMES = [ntime + '.json' for ntime in STD_INDEX]
+            folds = os.listdir(rootpath)
+            folds.sort()
+            fold = folds[-1]
 
         foldpath = rootpath+fold+'/'
         files = os.listdir(foldpath)
