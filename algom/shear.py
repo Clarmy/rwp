@@ -9,6 +9,7 @@ python = 3.6
 依赖库：
     numpy       $ conda install numpy
     netCDF4     $ conda install netCDF4
+    scipy       $ conda install scipy
 --------------------------------------------------------------------
 '''
 import sys
