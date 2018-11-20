@@ -14,6 +14,7 @@ sys.path.append('..')
 import os
 import time
 import json as js
+import traceback
 
 from optools import check_dir, standard_time_index
 from optools import init_preset, save_preset, load_preset
@@ -47,47 +48,51 @@ check_dir(SAVE_PATH)
 import log
 logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
 
-
 def main(rootpath, outpath):
+    try:
+        logger.info('Initial')
+        STD_INDEX = standard_time_index()
+        STD_FILENAMES = [ntime + '.json' for ntime in STD_INDEX]
+        folds = os.listdir(rootpath)
+        folds.sort()
+        fold = folds[-1]
 
-    STD_INDEX = standard_time_index()
-    STD_FILENAMES = [ntime + '.json' for ntime in STD_INDEX]
-    folds = os.listdir(rootpath)
-    folds.sort()
-    fold = folds[-1]
-
-    while True:
-
-        # 如果STD_FILENAMES为空，则扫描新的文件夹，否则扫描原有文件夹
-        if not STD_FILENAMES:
-            STD_INDEX = standard_time_index()
-            STD_FILENAMES = [ntime + '.json' for ntime in STD_INDEX]
-            folds = os.listdir(rootpath)
-            folds.sort()
-            fold = folds[-1]
-
-        foldpath = rootpath+fold+'/'
-        files = os.listdir(foldpath)
         while True:
-            if STD_FILENAMES[0] in files:
-                print('dir {0} finds new'\
-                      ' file:{1}'.format(fold,STD_FILENAMES[0]))
-                logger.info('dir {0} finds new'\
-                      ' file: {1}'.format(fold,STD_FILENAMES[0]))
-                savepath = outpath + fold + '/'
-                check_dir(savepath)
-                savepfn = savepath + \
-                            STD_FILENAMES[0].split('.')[0] + '.nc'
-                full_interp(foldpath + STD_FILENAMES[0], savepath=savepfn)
-                print('making grid from {0} has been finished.'.format(STD_FILENAMES[0]))
-                logger.info('making grid from {0} has been finished.'.format(STD_FILENAMES[0]))
-                STD_FILENAMES.pop(0)
-            else:
-                break
+            # 如果STD_FILENAMES为空，则扫描新的文件夹，否则扫描原有文件夹
+            if len(STD_FILENAMES) == 0:
+                logger.info('{0} fold has been finished'.format(fold))
+                STD_INDEX = standard_time_index()
+                STD_FILENAMES = [ntime + '.json' for ntime in STD_INDEX]
+                folds = os.listdir(rootpath)
+                folds.sort()
+                fold = folds[-1]
 
-        print('dir {0} has no new file'.format(fold))
-        logger.info('dir {0} has no new file'.format(fold))
-        time.sleep(10)
+            foldpath = rootpath+fold+'/'
+            files = os.listdir(foldpath)
+            while True:
+                if STD_FILENAMES[0] in files:
+                    print('dir {0} finds new'\
+                          ' file:{1}'.format(fold,STD_FILENAMES[0]))
+                    logger.info('dir {0} finds new'\
+                          ' file: {1}'.format(fold,STD_FILENAMES[0]))
+                    savepath = outpath + fold + '/'
+                    check_dir(savepath)
+                    savepfn = savepath + \
+                                STD_FILENAMES[0].split('.')[0] + '.nc'
+                    full_interp(foldpath + STD_FILENAMES[0], savepath=savepfn)
+                    print('making grid from {0} has been finished.'.format(STD_FILENAMES[0]))
+                    logger.info('making grid from {0} has been finished.'.format(STD_FILENAMES[0]))
+                    STD_FILENAMES.pop(0)
+                else:
+                    break
+
+            print('dir {0} has no new file'.format(fold))
+            logger.info('dir {0} has no new file'.format(fold))
+            time.sleep(10)
+    except:
+        traceback_message = traceback.format_exc()
+        logger.info(traceback_message)
+        exit()
 
 
 if __name__ == '__main__':
