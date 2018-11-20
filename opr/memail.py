@@ -1,3 +1,12 @@
+'''
+--------------------------------------------------------------------
+项目名：rwp
+模块名：opr.memail
+本模块主要用于邮件发送
+--------------------------------------------------------------------
+python = 3.6
+--------------------------------------------------------------------
+'''
 import sys
 import smtplib
 from email.mime.text import MIMEText
@@ -7,6 +16,21 @@ import json as js
 
 # 第三方 SMTP 服务
 def send_email(title,content,configpath):
+    '''发送邮件
+
+    输入参数
+    -------
+    title : `str`
+        邮件标题
+    content : `str`
+        邮件内容
+    configpath : `str`
+        配置文件路径
+
+    返回值
+    -----
+    `bool` 若发送成功则返回True，否则返回False
+    '''
 
     receiver_name = 'debugger'
     sender_name = 'preskymonitor'
@@ -35,8 +59,11 @@ def send_email(title,content,configpath):
         smtpObj.login(mail_user,mail_pass)
         smtpObj.sendmail(sender, receivers, message.as_string())
         print("邮件发送成功")
+        return True
+
     except smtplib.SMTPException:
         print("Error: 无法发送邮件")
+        return False
 
 if __name__ == '__main__':
     title, content = sys.argv[1], sys.argv[2]
