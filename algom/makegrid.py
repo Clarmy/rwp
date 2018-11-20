@@ -20,7 +20,7 @@ import numpy as np
 import netCDF4 as nc
 from scipy.interpolate import griddata, interp1d
 from algom.io import save_as_nc, load_js
-from errors import OutputError
+from algom.errors import OutputError
 import datetime
 
 
