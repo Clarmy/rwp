@@ -16,7 +16,8 @@ def setup_custom_logger(log_path,name):
 
     formatter = logging.Formatter(fmt='%(asctime)s:%(message)s')
     formatter.converter = time.gmtime
-    handler = TimedRotatingFileHandler(log_path, when='midnight')
+    handler = TimedRotatingFileHandler(log_path, utc=True,
+                                       when='midnight')
     handler.suffix = '%Y%m%d.log'
     handler.setFormatter(formatter)
     logger = logging.getLogger(name)
