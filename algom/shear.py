@@ -20,8 +20,9 @@ import netCDF4 as nc
 
 from scipy.interpolate import interp1d
 from algom.io import save_as_nc
+from algom.errors import InputError
 
-def shear(index,array,delt=1):
+def single_shear(index,array,delt=1):
     '''计算变量的切变
 
     输入参数
@@ -43,23 +44,57 @@ def shear(index,array,delt=1):
             new_index.append(index[i])
             new_array.append(array[i])
 
-    model = interp1d(new_index,new_array,kind='quadratic',
-                     fill_value=np.nan,bounds_error=False)
+    try:
+        model = interp1d(new_index,new_array,kind='quadratic',
+                        fill_value=np.nan,bounds_error=False)
+    except ValueError:
+        nan_array = np.full(np.array(index).shape,np.nan)
+        return nan_array
 
     shr = []
     # 下边界处理
     shr.append((model(index[0]+delt) - model(index[0]))/delt)
     # 主体数据处理
     for i in index[1:-1]:
-        try:
-            shr.append((model(i+delt) - model(i-delt)) / (2 * delt))
-        except ValueError:
-            import ipdb
-            ipdb.set_trace()
+        shr.append((model(i+delt) - model(i-delt)) / (2 * delt))
+
     # 上边界处理
     shr.append((model(index[-1]) - model(index[-1]-delt))/delt)
 
     return np.array(shr)
+
+
+def multi_shear(index,array,axis='height'):
+    '''计算3维切变
+
+    输入参数
+    -------
+    index : `ndarray` | `list`
+        切变轴上的相应变量值，例如高度轴上的高度值。该变量为1维数组。
+    array : `ndarray`
+        待计算的三维数组，该数组第1维(最左端)必须为高度
+    axis : `str`
+        切变轴选择，可以选择沿高度:'height'，沿经向（纬圈）:'lon'，
+        沿纬向（经圈）:'lat'
+    '''
+    if type(array) != np.ndarray:
+        array = np.array(array)
+    if type(index) != np.ndarray:
+        index = np.array(index)
+    if len(array.shape) != 3:
+        raise ValueError('array is not 3-Dimensions')
+    if len(index.shape) != 1:
+        raise ValueError('index is not 1-Dimension')
+
+    shape = array.shape
+    np.place(array,array==-9999,np.nan)
+    shear_array = np.full(shape,np.nan,dtype=np.float64)
+    for r in range(shape[1]):
+        for c in range(shape[2]):
+            shear_array[:,r,c] = single_shear(index,array[:,r,c])
+
+    return shear_array
+
 
 def main():
     pass
