@@ -17,12 +17,6 @@ import netCDF4 as nc
 import datetime
 
 
-class OutputError(Exception):
-    '''输出错误'''
-    def __init__(self, message):
-        self.message = message
-
-
 def load_js(filepath,exclude=['57494']):
     '''加载json数据
 
