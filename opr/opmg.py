@@ -80,8 +80,10 @@ def main(rootpath, outpath):
                     savepfn = savepath + \
                                 STD_FILENAMES[0].split('.')[0] + '.nc'
                     full_interp(foldpath + STD_FILENAMES[0], savepath=savepfn)
-                    print('making grid from {0} has been finished.'.format(STD_FILENAMES[0]))
-                    logger.info('making grid from {0} has been finished.'.format(STD_FILENAMES[0]))
+                    print('making grid from {0} has'\
+                          ' been finished.'.format(STD_FILENAMES[0]))
+                    logger.info('making grid from {0} has'\
+                          ' been finished.'.format(STD_FILENAMES[0]))
                     STD_FILENAMES.pop(0)
                 else:
                     break
