@@ -13,7 +13,6 @@ import pickle as pk
 from datetime import datetime, timedelta
 import time
 from collections import defaultdict
-import ipdb
 import logging
 
 # 调用全局日志
@@ -107,26 +106,53 @@ def next_time_index(timestr):
     return next_time.strftime('%Y%m%d%H%M')
 
 
-def strftime_to_datetime(strftime):
+def strftime_to_datetime(strftime,mod='minute'):
     '''将时间字符串输出为datetime格式对象
 
-    输入
-    ----
+    输入参数
+    -------
     strftime : `str`
         时间字符串，精确到分钟，例如201809101306
 
-    返回
-    ----
-    `datetime`
-        输入时间字符串对应的datetime对象
+    返回值
+    -----
+    `datetime` : 输入时间字符串对应的datetime对象
     '''
     year = int(strftime[:4])
     month = int(strftime[4:6])
     day = int(strftime[6:8])
-    hour = int(strftime[8:10])
-    minute = int(strftime[10:])
+    if mod == 'day':
+        hour = 0
+        minute = 0
+    elif mod == 'hour':
+        hour = int(strftime[8:10])
+        minute = 0
+    elif mod == 'minute':
+        hour = int(strftime[8:10])
+        minute = int(strftime[10:])
 
     return datetime(year, month, day, hour, minute)
+
+
+def datetime_to_strftime(dt):
+    '''将datetime转化为时间字符串
+
+    输入参数
+    -------
+    dt : `datetime.datetime`
+        datetime对象
+
+    返回值
+    -----
+    `str` : 时间字符串
+    '''
+    year = str(dt.year)
+    month = str(dt.month).zfill(2)
+    day = str(dt.day).zfill(2)
+    hour = str(dt.hour).zfill(2)
+    minute = str(dt.minute).zfill(2)
+
+    return ''.join([year,month,day,hour,minute])
 
 
 def is_timeout(time_index,LOG_PATH,threshold=360):
@@ -136,12 +162,13 @@ def is_timeout(time_index,LOG_PATH,threshold=360):
 
     输入参数
     -------
-
+    time_index : `str`
+    LOG_PATH : `str`
+    threshold : `float` | `int`
 
     返回值
     -----
-
-
+    `bool`
     '''
     # 如果所到文件时次已经超过utc当前时刻，那么时间阈值也要相应地后延10秒
     if datetime.utcnow() < strftime_to_datetime(time_index):
@@ -161,7 +188,7 @@ def is_timeout(time_index,LOG_PATH,threshold=360):
         except ValueError:
             # 在非processing行时跳出此次循环
             continue
-        if action == 'processing':
+        if action == 'processing' or action == 'missing':
             # 若是processing行，则记录最后一次处理记录last_proc_time（本地时间）
             # 同时根据value值推算下一时次文件的变量名（UTC时间）
             last_proc_time = parse_log_timestr(datetimestr)
@@ -169,24 +196,23 @@ def is_timeout(time_index,LOG_PATH,threshold=360):
             expect_time_index = next_time_index(value)
             break
     else:
-        # 如果上述循环没有被break终止，说明当前日志文件中不存在processing行，\
+        # 如果上述循环没有被break终止，说明当前日志文件中不存在processing/missing行，\
         #     在初始建立日志文件时会出现这种情况这时候需要手动设置last_proc_time \
         #     和 expect_time_index 的值
-        today = datetime.today()
+        today = datetime.utcnow().date()
 
         # 把last_proc_time设置为当天的00:00:00，即当天初始时间，通过这样的设置可以使\
-        #     程序在当天任何时刻启动都能把当天的历史数据补齐。
+        #     程序在当天任何时刻启动都能把当天的历史数据补齐。时间为utc时间。
         last_proc_time = datetime(today.year, today.month, today.day, 0, 0, 0)
 
-        # 把 expect_time_index 设置为当前处理时次（UTC），
-        #     可以使程序直接开始处理此时刻而无需排队。
-        expect_time_index = time_index
+        # 把 expect_time_index 设置为当天首个标准时次
+        expect_time_index = datetime_to_strftime(last_proc_time)
 
     if expect_time_index == time_index:
         # 若期望时次与当前时次相吻合则判断该时次是否超时
         delt = datetime.utcnow() - last_proc_time
-        print(' delt seconds: {}'.format(delt.seconds))
-        logger.info(' delt seconds: {}'.format(delt.seconds))
+        print('time spent(s): {}'.format(delt.seconds))
+        logger.info(' time spent(s): {}'.format(delt.seconds))
         if delt.seconds >= threshold:
             result = True
         else:
@@ -194,11 +220,46 @@ def is_timeout(time_index,LOG_PATH,threshold=360):
         return result
     else:
         # 若当前时次不是期望时次，则加入队列，不予计时
-        print('in queque.')
-        logger.info(' in queue.')
         result = False
 
     return result
+
+
+def dam():
+    '''大坝'''
+    now = datetime.utcnow()
+    year = now.year
+    month = now.month
+    day = now.day
+    today_init = datetime(year,month,day,0,0,0)
+    if now - today_init > timedelta(minutes=6):
+        pre6min = now - timedelta(minutes=6)
+
+        std_index = standard_time_index()
+        for n,ti in enumerate(std_index):
+            if strftime_to_datetime(ti) > pre6min:
+                result = std_index[n-1]
+                break
+    else:
+        result = std_index[0]
+
+    return strftime_to_datetime(result)
+
+
+def get_expect_time(index_preset):
+    '''获取期望时次'''
+    if index_preset:
+        preset_list = list(index_preset)
+        preset_list.sort()
+        last_time_index = preset_list[-1]
+        return next_time_index(last_time_index)
+    else:
+        date = datetime.utcnow().date()
+        year = date.year
+        month = date.month
+        day = date.day
+        date = datetime(year,month,day,0,0,0)
+        return datetime_to_strftime(date)
 
 
 def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
@@ -211,6 +272,9 @@ def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
         init_preset(preset_path)
 
     index_preset = load_preset(preset_path)
+    expect_time = get_expect_time(index_preset)
+    print('expecting: %s' % expect_time)
+    logger.info(' expecting: %s' % expect_time)
 
     # （未处理）新集是当前全集减去前集
     queue = set(file_name_lst) - preset
@@ -227,10 +291,41 @@ def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
             res_dict[match_timestr].add(file)
             preset.add(file)
 
+    if expect_time not in res_dict.keys():
+        time_is_out = is_timeout(expect_time,LOG_PATH)
+
+        # 若期望时刻罗后于已存在时次且不存在于已存在时次，则执行跳跃
+        jump = False
+        keys = list(res_dict.keys())
+        keys.sort()
+        for k in keys:
+            if strftime_to_datetime(k) > strftime_to_datetime(expect_time):
+                jump = True
+                jump_to = k
+
+        if time_is_out:
+            for time_index in res_dict:
+                is_station_enough(res_dict, time_index)
+                is_timeout(expect_time, LOG_PATH)
+            index_preset.add(expect_time)
+            save_preset(index_preset, preset_path)
+            result = {'res_pool':res_dict,'preset':preset,
+                      'has_new_task':True,'expect':expect_time}
+            return result
+        elif jump:
+            # index_preset.add(expect_time)
+            # save_preset(index_preset, preset_path)
+            logger.info(' missing: %s' % expect_time)
+            print('missing: %s' % expect_time)
+            expect_time = jump_to
+            logger.info(' jumping to: %s' % expect_time)
+            print('jumping to: %s' % expect_time)
+
+
     # 删除该时次重复的站
     res_dict = drop_duplicate_station(res_dict)
 
-    # 不超时（7分钟以内）情况下到站不全(小于69个站点）的时次予以保留
+    # 不超时（6分钟以内）情况下到站不全(小于70个站点）的时次予以保留
     to_remove = set([])
     for time_index in res_dict:
         if time_index in index_preset:
@@ -239,8 +334,9 @@ def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
 
         # 在到站不够且时间未超时时，剔除该时次，使其下一次再尝试
         if initial == True:
-            # 初始启动程序，仅判断到站情况
-            if not (station_is_enough):
+            ti_dt = strftime_to_datetime(time_index)
+            # 初始启动程序，将当前时次的前一个时次以前的文件全部处理
+            if ti_dt > dam():
                 for file in res_dict[time_index]:
                     preset.remove(file)
                     to_remove.add(time_index)
@@ -277,13 +373,13 @@ def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
 
     save_preset(index_preset, preset_path)
 
-    result = {'res_pool':res_dict,'preset':preset,'queue':queue,
-              'has_new_task':has_new_task}
+    result = {'res_pool':res_dict,'preset':preset,
+              'has_new_task':has_new_task,'expect':expect_time}
 
     return result
 
 
-def is_station_enough(res_pool, timestr, threshold=69):
+def is_station_enough(res_pool, timestr, threshold=70):
     '''判断文件源池中指定时次的站点数是否足够'''
     num = len(res_pool[timestr])
     print('{0}’s station num: {1}'.format(timestr, num))

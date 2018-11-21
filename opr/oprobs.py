@@ -34,11 +34,18 @@ from sys import argv
 try:
     test_flag = argv[1]
 except IndexError:
+    ROOT_PATH = config['data_source']
     LOG_PATH = config['parse']['oper']['log_path']
     SAVE_PATH = config['parse']['oper']['save_path']
     PRESET_PATH = config['parse']['oper']['preset_path']
 else:
     if test_flag == 'test':
+        ROOT_PATH = config['data_source']
+        LOG_PATH = config['parse']['test']['log_path']
+        PRESET_PATH = config['parse']['test']['preset_path']
+        SAVE_PATH = config['parse']['test']['save_path']
+    elif test_flag == 'test_local':
+        ROOT_PATH = '/mnt/data14/liwt/test/source/'
         LOG_PATH = config['parse']['test']['log_path']
         PRESET_PATH = config['parse']['test']['preset_path']
         SAVE_PATH = config['parse']['test']['save_path']
@@ -105,10 +112,10 @@ def main(rootpath, outpath):
             turn_day_timestamp = time.time()
             turn_day_switch = True
 
-        # 若当前时间比转日时间戳的间隔达到300秒，则改变文件夹目录，正式转日
+        # 若当前时间比转日时间戳的间隔达到200秒，则改变文件夹目录，正式转日
         if turn_day_switch:
             turn_day_delay = time.time() - turn_day_timestamp
-            if turn_day_delay >= 300:
+            if turn_day_delay >= 200:
 
                 turn_day_switch = False
 
@@ -146,26 +153,23 @@ def main(rootpath, outpath):
 
         res_pool = result['res_pool']
         preset = result['preset']
-        queue = result['queue']
         has_new_task = result['has_new_task']
-
-        # 总文件池
-        logger.info(' file pool: %i' % len(queue))
-        print('file pool: %i' % len(queue))
+        expect = result['expect']
 
         # 分割线
         logger.info(' '+'-'*29)
         print('-'*30)
 
         if has_new_task:
-            for itime in sorted(res_pool.keys()):
-                logger.info(' processing: %s' % itime)
-                print('processing: %s' % itime)
-                result_list = gather_robs(res_pool, itime, inpath)
-                if result_list:
-                    save_as_json(result_list,savepath+itime+'.json',mod='multi')
-                else:
-                    continue
+            if expect in res_pool.keys():
+                for itime in sorted(res_pool.keys()):
+                    logger.info(' processing: %s' % itime)
+                    print('processing: %s' % itime)
+                    result_list = gather_robs(res_pool, itime, inpath)
+                    if result_list:
+                        save_as_json(result_list,savepath+itime+'.json',mod='multi')
+                    else:
+                        continue
 
             save_preset(preset, preset_pfn)
 
@@ -174,5 +178,5 @@ def main(rootpath, outpath):
 
 
 if __name__ == '__main__':
-    ROOT_PATH = config['data_source']
+    # ROOT_PATH = config['data_source']
     main(ROOT_PATH, SAVE_PATH)
