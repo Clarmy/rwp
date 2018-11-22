@@ -84,7 +84,7 @@ def main(rootpath, outpath):
                 logger.info('dir {0} has new file:'.format(fold))
                 for nf in newfiles:
                     print('\t{0}'.format(nf))
-                    logger.info('\t{0}'.format(nf))
+                    logger.info('{0}'.format(nf))
                 print('processing...')
                 logger.info('processing...')
                 for fn in newfiles:
@@ -93,8 +93,8 @@ def main(rootpath, outpath):
                     print('{0} finished'.format(fn))
                     logger.info('{0} finished'.format(fn))
 
-            print('dir {0} has no new file'.format(fold))
-            logger.info('dir {0} has no new file'.format(fold))
+            print('-'*30)
+            logger.info('-'*30)
             time.sleep(5)
     except:
         traceback_message = traceback.format_exc()
