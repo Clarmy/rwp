@@ -302,11 +302,11 @@ def gather_res(file_name_lst, preset, STD_INDEX, LOG_PATH, PRESET_PATH,
             if strftime_to_datetime(k) > strftime_to_datetime(expect_time):
                 jump = True
                 jump_to = k
+                break
 
         if time_is_out:
-            for time_index in res_dict:
-                is_station_enough(res_dict, time_index)
-                is_timeout(expect_time, LOG_PATH)
+            logger.info(' missing: %s' % expect_time)
+            print('missing: %s' % expect_time)
             index_preset.add(expect_time)
             save_preset(index_preset, preset_path)
             result = {'res_pool':res_dict,'preset':preset,
