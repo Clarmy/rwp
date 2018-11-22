@@ -179,4 +179,9 @@ def main(rootpath, outpath):
 
 if __name__ == '__main__':
     # ROOT_PATH = config['data_source']
-    main(ROOT_PATH, SAVE_PATH)
+    try:
+        main(ROOT_PATH, SAVE_PATH)
+    except:
+        traceback_message = traceback.format_exc()
+        logger.info(traceback_message)
+        exit()
