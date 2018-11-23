@@ -96,8 +96,6 @@ def main(rootpath, outpath):
                     print('{0} finished'.format(fn))
                     logger.info('{0} finished'.format(fn))
 
-            print('-'*30)
-            logger.info('-'*30)
             time.sleep(5)
     except:
         traceback_message = traceback.format_exc()
