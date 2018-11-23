@@ -75,6 +75,9 @@ def main(rootpath, outpath):
         init_preset(PRESET_PATH+'mg.pk')
 
         while True:
+            folds = os.listdir(rootpath)
+            folds.sort()
+            fold = folds[-1]
             newfiles = get_new_files(fold,PRESET_PATH)
             foldpath = rootpath + fold + '/'
             savepath = outpath + fold + '/'
@@ -82,9 +85,9 @@ def main(rootpath, outpath):
             if newfiles:
                 print('dir {0} has new file:'.format(fold))
                 logger.info('dir {0} has new file:'.format(fold))
-                for nf in newfiles:
-                    print('\t{0}'.format(nf))
-                    logger.info('{0}'.format(nf))
+                for fn in newfiles:
+                    print('\t{0}'.format(fn))
+                    logger.info('{0}'.format(fn))
                 print('processing...')
                 logger.info('processing...')
                 for fn in newfiles:
