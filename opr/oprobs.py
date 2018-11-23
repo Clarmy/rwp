@@ -1,14 +1,13 @@
 # coding : utf-8
 '''
 --------------------------------------------------------------------
-项目名：wpr
+项目名：rwp
 模块名：opr.oprobs
 本模块用于自动化解码风廓线雷达实时观测资料（ROBS）
 --------------------------------------------------------------------
 python = 3.6
 --------------------------------------------------------------------
 '''
-
 import sys
 sys.path.append('..')
 
@@ -18,9 +17,9 @@ import time
 from datetime import datetime, timedelta
 import traceback
 
-from opr.optools import gather_res, standard_time_index
+from opr.optools import extract_curset, standard_time_index
 from opr.optools import init_preset, save_preset, load_preset
-from opr.optools import check_dir
+from opr.optools import check_dir, get_expect_time
 from opr.optools import get_today_date, get_yesterday_date
 from opr.optools import delay_when_today_dir_missing
 from opr.optools import delay_when_data_dir_empty
@@ -29,10 +28,8 @@ from algom.io import parse, save_as_json
 with open('../config.json') as f:
     config = js.load(f)
 
-from sys import argv
-
 try:
-    test_flag = argv[1]
+    test_flag = sys.argv[1]
 except IndexError:
     ROOT_PATH = config['data_source']
     LOG_PATH = config['parse']['oper']['log_path']
@@ -62,11 +59,11 @@ import opr.log as log
 logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
 
 
-def gather_robs(res_pool, itime, root_path):
+def gather(curset, root_path):
     '''将同一标准时次所有站点的数据读取为json格式字符串'''
 
     result_list = []
-    for file in res_pool[itime]:
+    for file in sorted(list(curset)):
         path_file = root_path + file
         single_dict = parse(path_file)
         if not single_dict:
@@ -81,11 +78,16 @@ def main(rootpath, outpath):
     '''主函数'''
 
     check_dir(outpath)
+
     # 初始化今日日期
     today = get_today_date()
 
-    preset_pfn = PRESET_PATH + 'robs.%s.pk' % today
-    init_preset(preset_pfn)
+    # 清理 preset 文件
+    try:
+        os.remove(PRESET_PATH + 'files.pk')
+        os.remove(PRESET_PATH + 'times.pk')
+    except FileNotFoundError:
+        pass
 
     # 判断日期是否更改的标识变量
     turn_day_switch = False
@@ -100,14 +102,13 @@ def main(rootpath, outpath):
     # 若今日数据目录为空，则等待至其有值再继续
     delay_when_data_dir_empty(inpath)
 
-    # 建立当天的标准时间索引
-    STD_INDEX = standard_time_index()
-
     # 初次启动标志
     initial = True
 
+    expect_time = get_expect_time(PRESET_PATH)
+    turn_time = False
     while True:
-        # 如果当前日期与上次记录不一致，则建立转日时间戳
+        # 如果当前日期与上次记录不一致
         if get_today_date() != today and turn_day_switch == False:
             turn_day_timestamp = time.time()
             turn_day_switch = True
@@ -133,48 +134,36 @@ def main(rootpath, outpath):
                 # 若今日数据目录为空，则等待至其有值再继续
                 delay_when_data_dir_empty(inpath)
 
-                # 建立当天的标准时间索引
-                STD_INDEX = standard_time_index()
-
-        preset = load_preset(preset_pfn)
         files = os.listdir(inpath)
 
         if initial == True:
             print('initialize.')
             logger.info(' initialize.')
+            initial = False
         else:
             pass
 
-        result = gather_res(files, preset,
-            STD_INDEX,LOG_PATH,PRESET_PATH,initial)
+        if turn_time == True:
+            expect_time = get_expect_time(PRESET_PATH)
 
-        # 处理完成一次以后关闭initial标识
-        initial = False
+        curset, turn_time = extract_curset(files,expect_time, PRESET_PATH)
 
-        res_pool = result['res_pool']
-        preset = result['preset']
-        has_new_task = result['has_new_task']
-        expect = result['expect']
-
-        # 分割线
-        logger.info(' '+'-'*29)
-        print('-'*30)
-
-        if has_new_task:
-            if expect in res_pool.keys():
-                for itime in sorted(res_pool.keys()):
-                    logger.info(' processing: %s' % itime)
-                    print('processing: %s' % itime)
-                    result_list = gather_robs(res_pool, itime, inpath)
-                    if result_list:
-                        save_as_json(result_list,savepath+itime+'.json',mod='multi')
-                    else:
-                        continue
-
-            save_preset(preset, preset_pfn)
+        if curset:
+            print('processing: {}'.format(expect_time))
+            logger.info(' processing: {}'.format(expect_time))
+            # t0 = time.time()
+            # for fn in sorted(list(curset)):
+            result_list = gather(curset, inpath)
+            # print(time.time()-t0)
+            if result_list:
+                save_as_json(result_list,
+                             savepath + expect_time + '.json',
+                             mod='multi')
+                print('finished')
+                logger.info(' finished')
 
         else:
-            time.sleep(10)
+            time.sleep(20)
 
 
 if __name__ == '__main__':
@@ -183,5 +172,6 @@ if __name__ == '__main__':
         main(ROOT_PATH, SAVE_PATH)
     except:
         traceback_message = traceback.format_exc()
+        print(traceback_message)
         logger.info(traceback_message)
         exit()
