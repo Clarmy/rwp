@@ -14,11 +14,10 @@ sys.path.append('..')
 import os
 import json as js
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 import traceback
 
-from opr.optools import extract_curset, standard_time_index
-from opr.optools import init_preset, save_preset, load_preset
+from opr.optools import extract_curset
 from opr.optools import check_dir, get_expect_time
 from opr.optools import get_today_date
 from opr.optools import delay_when_today_dir_missing
@@ -28,20 +27,24 @@ from algom.io import parse, save_as_json
 with open('../config.json') as f:
     config = js.load(f)
 
+# 根据传参选择运行模式
 try:
     test_flag = sys.argv[1]
 except IndexError:
+    # 若无传参，则按业务化模式运行，加载业务化配置
     ROOT_PATH = config['data_source']
     LOG_PATH = config['parse']['oper']['log_path']
     SAVE_PATH = config['parse']['oper']['save_path']
     PRESET_PATH = config['parse']['oper']['preset_path']
 else:
     if test_flag == 'test':
+        # 若传参为'test'，则按普通测试模式运行，加载测试配置
         ROOT_PATH = config['data_source']
         LOG_PATH = config['parse']['test']['log_path']
         PRESET_PATH = config['parse']['test']['preset_path']
         SAVE_PATH = config['parse']['test']['save_path']
     elif test_flag == 'test_local':
+        # 若传参为'test_local'，则按本地源模式运行，加载本地源配置
         ROOT_PATH = '/mnt/data14/liwt/test/source/'
         LOG_PATH = config['parse']['test']['log_path']
         PRESET_PATH = config['parse']['test']['preset_path']
@@ -60,7 +63,28 @@ logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
 
 
 def gather(curset, root_path):
-    '''将同一标准时次所有站点的数据读取为json格式字符串'''
+    '''将同一标准时次所有站点的数据读取为json格式字符串
+
+    输入参数
+    -------
+    curset : `set`
+        当前时次的文件集合，集合内存储的是不含路径的待处理文件名。
+    root_path : `str`
+        待处理的源文件存储路径
+
+    返回值
+    -----
+    result : `list`
+        待输出的内容列表，该列表内嵌套了多个字典，其样式为：
+        [
+            {key1:value1,key2:value2, ... ,keyn:valuen},
+            {key1:value1,key2:value2, ... ,keyn:valuen},
+            {key1:value1,key2:value2, ... ,keyn:valuen},
+            ...
+            {key1:value1,key2:value2, ... ,keyn:valuen},
+            {key1:value1,key2:value2, ... ,keyn:valuen}
+        ]
+    '''
 
     result_list = []
     for file in sorted(list(curset)):
@@ -75,7 +99,15 @@ def gather(curset, root_path):
 
 
 def main(rootpath, outpath):
-    '''主函数'''
+    '''主要用于自动化处理ROBS文件
+
+    输入参数
+    -------
+    rootpath : `str`
+        数据源的根路径，其末尾不带日期文件夹路径
+    outpath : `str`
+        数据保存路径，其末尾不带日期文件夹路径
+    '''
 
     check_dir(outpath)
 
@@ -170,6 +202,7 @@ if __name__ == '__main__':
     try:
         main(ROOT_PATH, SAVE_PATH)
     except:
+        # 若出现异常，则打印回溯信息并记入日志
         traceback_message = traceback.format_exc()
         print(traceback_message)
         logger.info(traceback_message)
