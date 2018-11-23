@@ -321,6 +321,8 @@ def delay_when_today_dir_missing(rootpath):
             is_exist = True
             break
         else:
+            print('today dir dosen\'t exist.')
+            logger.info(' today dir dosen\'t exist.')
             time.sleep(10)
 
     return is_exist
@@ -331,10 +333,12 @@ def delay_when_data_dir_empty(path):
         files = os.listdir(path)
         if files:
             is_empty = False
-            print('Preparing...')
+            print('target dir isn\'t empty')
             time.sleep(5)
             break
         else:
+            print('target dir is empty.')
+            logger.info(' target dir is empty.')
             time.sleep(10)
 
     return is_empty
