@@ -20,7 +20,7 @@ import traceback
 from opr.optools import extract_curset, standard_time_index
 from opr.optools import init_preset, save_preset, load_preset
 from opr.optools import check_dir, get_expect_time
-from opr.optools import get_today_date, get_yesterday_date
+from opr.optools import get_today_date
 from opr.optools import delay_when_today_dir_missing
 from opr.optools import delay_when_data_dir_empty
 from algom.io import parse, save_as_json
@@ -154,10 +154,7 @@ def main(rootpath, outpath):
         if curset:
             print('processing: {}'.format(expect_time))
             logger.info(' processing: {}'.format(expect_time))
-            # t0 = time.time()
-            # for fn in sorted(list(curset)):
             result_list = gather(curset, inpath)
-            # print(time.time()-t0)
             if result_list:
                 save_as_json(result_list,
                              savepath + expect_time + '.json',
@@ -170,7 +167,6 @@ def main(rootpath, outpath):
 
 
 if __name__ == '__main__':
-    # ROOT_PATH = config['data_source']
     try:
         main(ROOT_PATH, SAVE_PATH)
     except:
