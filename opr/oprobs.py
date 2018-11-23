@@ -129,7 +129,7 @@ def main(rootpath, outpath):
 
                 # 若今日的数据目录缺失，则等待至其到达再继续
                 delay_when_today_dir_missing(rootpath)
-                
+
                 inpath = rootpath + today + '/'
                 savepath = outpath + today + '/'
                 check_dir(savepath)
@@ -162,8 +162,8 @@ def main(rootpath, outpath):
                 save_as_json(result_list,
                              savepath + expect_time + '.json',
                              mod='multi')
-                print('finished')
-                logger.info(' finished')
+                print('finished.')
+                logger.info(' finished.')
 
         else:
             time.sleep(20)
