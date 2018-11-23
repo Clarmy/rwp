@@ -116,17 +116,20 @@ def main(rootpath, outpath):
         # 若当前时间比转日时间戳的间隔达到200秒，则改变文件夹目录，正式转日
         if turn_day_switch:
             turn_day_delay = time.time() - turn_day_timestamp
-            if turn_day_delay >= 200:
-
-                turn_day_switch = False
+            if turn_day_delay >= 60:
 
                 today = get_today_date()
-                preset_pfn = PRESET_PATH + 'robs.%s.pk' % today
-                init_preset(preset_pfn)
+                turn_day_switch = False
+
+                try:
+                    os.remove(PRESET_PATH + 'files.pk')
+                    os.remove(PRESET_PATH + 'times.pk')
+                except FileNotFoundError:
+                    pass
 
                 # 若今日的数据目录缺失，则等待至其到达再继续
                 delay_when_today_dir_missing(rootpath)
-
+                
                 inpath = rootpath + today + '/'
                 savepath = outpath + today + '/'
                 check_dir(savepath)
