@@ -208,6 +208,10 @@ def extract_curset(files, expect_time, preset_path):
         save_preset(time_preset, time_preset_pfn)
         save_preset(file_preset, file_preset_pfn)
         result =  curset
+        if not result:
+            # 若超时但结果为空集，说明该时次缺失，缺失标志改为True
+            print('{} is missing.'.format(expect_time))
+            logger.info(' {} is missing.'.format(expect_time))
         turn_time = True
     else:
         result = set([])
