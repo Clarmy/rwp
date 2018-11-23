@@ -96,6 +96,34 @@ def multi_shear(index,array,axis='height'):
     return shear_array
 
 
+def full_wind_shear(readpfn,savepfn=None):
+    '''处理整个时次的风切变
+
+    输入参数
+    -------
+    readpfn : `str`
+        输入文件路径，文件须为.nc文件
+    savepfn : `str`
+        输出文件路径，文件须为.nc文件
+
+    '''
+    if not pfn.endswith('.nc'):
+        raise InputError('Input file is not the type of netCDF.')
+
+    file_obj = nc.Dataset(pfn)
+    u = file_obj.variables['U'][:]
+    v = file_obj.variables['V'][:]
+    lat = file_obj.variables['lat'][:]
+    lon = file_obj.variables['lon'][:]
+    hws = file_obj.variables['HWS'][:]
+    hwd = file_obj.variables['HWD'][:]
+    height = file_obj.variables['SH'][:]
+    sh_u = multi_shear(height,u)
+    sh_v = multi_shear(height,v)
+    sh_hws = multi_shear(height,hws)
+    sh_hwd = multi_shear(height,hwd)
+
+
 def main():
     pass
 
