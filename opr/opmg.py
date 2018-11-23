@@ -67,7 +67,7 @@ def get_new_files(fold,PRESET_PATH):
 def main(rootpath, outpath):
     try:
         print('Initial')
-        logger.info('Initial')
+        logger.info(' Initial')
 
         folds = os.listdir(rootpath)
         folds.sort()
@@ -84,17 +84,17 @@ def main(rootpath, outpath):
             check_dir(savepath)
             if newfiles:
                 print('dir {0} has new file:'.format(fold))
-                logger.info('dir {0} has new file:'.format(fold))
+                logger.info(' dir {0} has new file:'.format(fold))
                 for fn in newfiles:
                     print('\t{0}'.format(fn))
-                    logger.info('{0}'.format(fn))
+                    logger.info(' {0}'.format(fn))
                 print('processing...')
-                logger.info('processing...')
+                logger.info(' processing...')
                 for fn in newfiles:
                     savepfn = savepath + fn.split('.')[0] + '.nc'
                     full_interp(foldpath + fn, savepath=savepfn)
                     print('{0} finished'.format(fn))
-                    logger.info('{0} finished'.format(fn))
+                    logger.info(' {0} finished'.format(fn))
 
             time.sleep(5)
     except:
