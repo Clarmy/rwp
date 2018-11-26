@@ -48,13 +48,17 @@ def main():
         std_index = standard_time_index()
         today = get_today_date()
 
-        folds = sorted(os.listdir(ROOT_PATH))
-        last_fold = folds[-1]
-        path = ROOT_PATH + last_fold + '/'
+        fold = today
+        path = ROOT_PATH + fold + '/'
 
-        filenames = os.listdir(path)
-        indexs = sorted([fn.split('.')[0] for fn in filenames])
-        last_time = indexs[-1]
+        try:
+            filenames = os.listdir(path)
+        except FileNotFoundError:
+            time.sleep(5)
+            continue
+        else:
+            indexs = sorted([fn.split('.')[0] for fn in filenames])
+            last_time = indexs[-1]
 
         dampoint = std_index.index(last_time)
         if dampoint < len(std_index)-1:

@@ -136,6 +136,18 @@ def next_time_index(timestr):
     return next_time.strftime('%Y%m%d%H%M')
 
 
+def get_new_files(fold,ROOT_PATH,PRESET_PATH,preset_fn):
+    '''获取未处理文件集'''
+    preset = load_preset(PRESET_PATH + preset_fn)
+    path = ROOT_PATH + fold + '/'
+    curset = set(os.listdir(path))
+    diffset = curset - preset
+    preset.update(diffset)
+    save_preset(preset, PRESET_PATH + preset_fn)
+    diff = sorted(list(diffset))
+    return diff
+
+
 def get_expect_time(preset_path):
     '''获取期望时次'''
     time_preset_pfn = preset_path + 'times.pk'
@@ -243,12 +255,11 @@ def load_preset(path):
     return preset
 
 
-def standard_time_index():
+def standard_time_index(date=datetime.utcnow()):
     '''建立逐6分钟标准时间索引'''
-    now = datetime.utcnow()
-    year = str(now.year)
-    month = str(now.month).zfill(2)
-    day = str(now.day).zfill(2)
+    year = str(date.year)
+    month = str(date.month).zfill(2)
+    day = str(date.day).zfill(2)
     date = ''.join([year, month, day])
     hours = [str(n).zfill(2) for n in range(24)]
     minutes = [str(n).zfill(2) for n in range(0, 60, 6)]
@@ -262,7 +273,7 @@ def standard_time_index():
     return tuple(stdt_index)
 
 
-def match_standard(timestr):
+def match_standard(timestr,date=datetime.utcnow()):
     '''（规定格式的）任意时间字符串向标准时间索引的匹配
 
     输入参数
@@ -278,9 +289,9 @@ def match_standard(timestr):
     try:
         assert len(timestr) == 12
     except AssertionError:
-        raise ValueError('time str is not invalid.')
+        raise ValueError('time str is invalid.')
 
-    std_index = standard_time_index()
+    std_index = standard_time_index(date)
 
     # ymdh : year-month-day-hour
     ymdh = timestr[:10]
@@ -290,10 +301,15 @@ def match_standard(timestr):
     for index, time_str in enumerate(std_index):
         if ymdh == time_str[:10]:
             delt.add((abs(minute-int(time_str[10:])), index))
+    try:
+        min_index = min(delt)[1]
+    except ValueError:
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        result = match_standard(timestr,date=yesterday)
+    else:
+        result = std_index[min_index]
 
-    min_index = min(delt)[1]
-
-    return std_index[min_index]
+    return result
 
 
 def get_today_date():
@@ -321,8 +337,8 @@ def delay_when_today_dir_missing(rootpath):
             is_exist = True
             break
         else:
-            print('today dir dosen\'t exist.')
-            logger.info(' today dir dosen\'t exist.')
+            print('today dir: {} dosen\'t exist.'.format(today))
+            logger.info(' today dir: {} dosen\'t exist.'.format(today))
             time.sleep(10)
 
     return is_exist

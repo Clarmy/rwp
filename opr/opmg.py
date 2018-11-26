@@ -16,16 +16,14 @@ import time
 import json as js
 import traceback
 from datetime import datetime, timedelta
+import optools as opt
+import algom.makegrid as mkg
 
-from optools import check_dir, standard_time_index
-from optools import init_preset, save_preset, load_preset
-from optools import strftime_to_datetime, datetime_to_strftime
-from optools import load_preset, save_preset, init_preset
-from algom.makegrid import full_interp
 
 # 加载配置文件
 with open('../config.json') as f:
     config = js.load(f)
+
 
 # 判断测试模式还是业务模式
 try:
@@ -42,26 +40,16 @@ else:
     else:
         raise ValueError('Unkown flag')
 
+
 # 检查创建目录
-check_dir(LOG_PATH)
-check_dir(PRESET_PATH)
-check_dir(SAVE_PATH)
+opt.check_dir(LOG_PATH)
+opt.check_dir(PRESET_PATH)
+opt.check_dir(SAVE_PATH)
+
 
 # 配置日志信息
 import log
 logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
-
-
-def get_new_files(fold,PRESET_PATH):
-    preset = load_preset(PRESET_PATH+'mg.pk')
-    path = ROOT_PATH + fold + '/'
-    curset = set(os.listdir(path))
-    diffset = curset - preset
-    preset.update(diffset)
-    save_preset(preset, PRESET_PATH+'mg.pk')
-    diff = list(diffset)
-    diff.sort()
-    return diff
 
 
 def main(rootpath, outpath):
@@ -72,16 +60,14 @@ def main(rootpath, outpath):
         folds = os.listdir(rootpath)
         folds.sort()
         fold = folds[-1]
-        init_preset(PRESET_PATH+'mg.pk')
+        opt.init_preset(PRESET_PATH+'mg.pk')
 
         while True:
-            folds = os.listdir(rootpath)
-            folds.sort()
-            fold = folds[-1]
-            newfiles = get_new_files(fold,PRESET_PATH)
+            fold = sorted(os.listdir(rootpath))[-1]
+            newfiles = opt.get_new_files(fold,ROOT_PATH,PRESET_PATH,'mg.pk')
             foldpath = rootpath + fold + '/'
             savepath = outpath + fold + '/'
-            check_dir(savepath)
+            opt.check_dir(savepath)
             if newfiles:
                 print('dir {0} has new file:'.format(fold))
                 logger.info(' dir {0} has new file:'.format(fold))
@@ -92,7 +78,7 @@ def main(rootpath, outpath):
                 logger.info(' processing...')
                 for fn in newfiles:
                     savepfn = savepath + fn.split('.')[0] + '.nc'
-                    full_interp(foldpath + fn, savepath=savepfn)
+                    mkg.full_interp(foldpath + fn, savepath=savepfn)
                     print('{0} finished'.format(fn))
                     logger.info(' {0} finished'.format(fn))
 

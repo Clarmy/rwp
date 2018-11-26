@@ -16,12 +16,7 @@ import json as js
 import time
 from datetime import datetime
 import traceback
-
-from opr.optools import extract_curset
-from opr.optools import check_dir, get_expect_time
-from opr.optools import get_today_date
-from opr.optools import delay_when_today_dir_missing
-from opr.optools import delay_when_data_dir_empty
+import optools as opt
 from algom.io import parse, save_as_json
 
 with open('../config.json') as f:
@@ -52,9 +47,9 @@ else:
     else:
         raise ValueError('Unkown flag')
 
-check_dir(LOG_PATH)
-check_dir(PRESET_PATH)
-check_dir(SAVE_PATH)
+opt.check_dir(LOG_PATH)
+opt.check_dir(PRESET_PATH)
+opt.check_dir(SAVE_PATH)
 
 
 # 配置日志信息
@@ -109,10 +104,10 @@ def main(rootpath, outpath):
         数据保存路径，其末尾不带日期文件夹路径
     '''
 
-    check_dir(outpath)
+    opt.check_dir(outpath)
 
     # 初始化今日日期
-    today = get_today_date()
+    today = opt.get_today_date()
 
     # 清理 preset 文件
     try:
@@ -124,33 +119,33 @@ def main(rootpath, outpath):
     # 判断日期是否更改的标识变量
     turn_day_switch = False
 
-    delay_when_today_dir_missing(rootpath)
+    opt.delay_when_today_dir_missing(rootpath)
 
     # 初始化首次处理的文件目录
     inpath = rootpath + today + '/'
     savepath = outpath + today + '/'
-    check_dir(savepath)
+    opt.check_dir(savepath)
 
     # 若今日数据目录为空，则等待至其有值再继续
-    delay_when_data_dir_empty(inpath)
+    opt.delay_when_data_dir_empty(inpath)
 
     # 初次启动标志
     initial = True
 
-    expect_time = get_expect_time(PRESET_PATH)
+    expect_time = opt.get_expect_time(PRESET_PATH)
     turn_time = False
     while True:
         # 如果当前日期与上次记录不一致
-        if get_today_date() != today and turn_day_switch == False:
+        if opt.get_today_date() != today and turn_day_switch == False:
             turn_day_timestamp = time.time()
             turn_day_switch = True
 
-        # 若当前时间比转日时间戳的间隔达到200秒，则改变文件夹目录，正式转日
+        # 若当前时间比转日时间戳的间隔达到60秒，则改变文件夹目录，正式转日
         if turn_day_switch:
             turn_day_delay = time.time() - turn_day_timestamp
             if turn_day_delay >= 60:
 
-                today = get_today_date()
+                today = opt.get_today_date()
                 turn_day_switch = False
 
                 try:
@@ -160,14 +155,14 @@ def main(rootpath, outpath):
                     pass
 
                 # 若今日的数据目录缺失，则等待至其到达再继续
-                delay_when_today_dir_missing(rootpath)
+                opt.delay_when_today_dir_missing(rootpath)
 
                 inpath = rootpath + today + '/'
                 savepath = outpath + today + '/'
-                check_dir(savepath)
+                opt.check_dir(savepath)
 
                 # 若今日数据目录为空，则等待至其有值再继续
-                delay_when_data_dir_empty(inpath)
+                opt.delay_when_data_dir_empty(inpath)
 
         files = os.listdir(inpath)
 
@@ -179,9 +174,9 @@ def main(rootpath, outpath):
             pass
 
         if turn_time == True:
-            expect_time = get_expect_time(PRESET_PATH)
+            expect_time = opt.get_expect_time(PRESET_PATH)
 
-        curset, turn_time = extract_curset(files,expect_time, PRESET_PATH)
+        curset, turn_time = opt.extract_curset(files,expect_time, PRESET_PATH)
 
         if curset:
             print('processing: {}'.format(expect_time))
