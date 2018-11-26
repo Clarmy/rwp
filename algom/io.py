@@ -349,7 +349,7 @@ def save_as_nc(data_dict, attr_dict, savepath):
 
         file_obj.createDimension('lon', len(src_lon))
         file_obj.createDimension('lat', len(src_lat))
-        file_obj.createDimension('time', None)
+        file_obj.createDimension('time', 1)
         if dim_num == 3:
             file_obj.createDimension('level', len(src_level))
 

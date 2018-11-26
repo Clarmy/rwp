@@ -178,7 +178,7 @@ def full_interp(pfn, method='linear', attr=False, savepath=None):
     ---
     OutputError : 当参数savepath不以'.json'或'.nc'结尾时抛出
     '''
-    def get_datetime(pfn):
+    def get_datetime(pfn,mod='string'):
         timestr = pfn.split('/')[-1].split('.')[0]
         yyyy = int(timestr[:4])
         mm = int(timestr[4:6])
@@ -187,7 +187,10 @@ def full_interp(pfn, method='linear', attr=False, savepath=None):
         MM = int(timestr[10:])
         time_obj = datetime.datetime(yyyy,mm,dd,HH,MM)
         time_units = 'minutes since 2018-01-01 00:00:00'
-        return nc.date2num(time_obj,time_units)
+        if mod == 'string':
+            return timestr
+        elif mod == 'digit':
+            return nc.date2num(time_obj,time_units)
 
 
     def nan_convert(array,to=None):
