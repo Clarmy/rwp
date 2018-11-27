@@ -244,7 +244,6 @@ def full_interp(pfn, method='linear', attr=False, savepath=None):
     grd_lons, grd_lats = np.meshgrid(grd_lon,grd_lat)
 
     data_dict = {}
-    # for varkey in varkdeys:
     multi_u_grds = []
     multi_v_grds = []
     multi_hws_grds = []

@@ -21,12 +21,6 @@ import netCDF4 as nc
 from algom.io import save_as_nc
 
 
-def lon_distance(latdeg):
-    '''计算纬圈上单位经度的距离'''
-    rad = np.deg2rad(latdeg)
-    return np.cos(rad) * 11132300
-
-
 def point_divg(ny,nx,u,v,interval=0.5,fill_value=-9999.):
     '''计算单格点的散度值
 

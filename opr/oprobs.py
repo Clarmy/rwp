@@ -176,7 +176,8 @@ def main(rootpath, outpath):
         if turn_time == True:
             expect_time = opt.get_expect_time(PRESET_PATH)
 
-        curset, turn_time = opt.extract_curset(files,expect_time, PRESET_PATH)
+        curset, turn_time = opt.extract_curset(files,expect_time,
+                                               PRESET_PATH)
 
         if curset:
             print('processing: {}'.format(expect_time))
