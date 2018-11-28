@@ -29,6 +29,7 @@ with open('../config.json') as f:
 try:
     test_flag = sys.argv[1]
 except IndexError:
+    ROOT_PATH = config['parse']['oper']['save_path']
     LOG_PATH = config['mkgrd']['oper']['log_path']
     SAVE_PATH = config['mkgrd']['oper']['save_path']
     PRESET_PATH = config['mkgrd']['oper']['preset_path']
@@ -97,5 +98,4 @@ def main(rootpath, outpath):
 
 
 if __name__ == '__main__':
-    ROOT_PATH = config['parse']['oper']['save_path']
     main(ROOT_PATH, SAVE_PATH)
