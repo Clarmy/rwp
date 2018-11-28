@@ -16,10 +16,8 @@ import pandas as pd
 import netCDF4 as nc
 import datetime
 
-exclude = ['57494','56462','52889','58527','57793',
-           '58637','58259']
 
-def load_js(filepath,exclude=exclude):
+def load_js(filepath,exclude):
     '''加载json数据
 
     输入参数

@@ -13,6 +13,14 @@ import pickle as pk
 from datetime import datetime, timedelta
 import time
 import logging
+import json as js
+
+
+with open('../config.json') as f:
+    config = js.load(f)
+
+exclued = config['exclude']
+
 
 # 调用全局日志
 logger = logging.getLogger('root')
@@ -45,12 +53,6 @@ def drop_duplicate_station(dup_set):
     -----
     `set` : 剔除了重复站点的文件名集合
     '''
-
-    def get_station_id(file_name):
-        '''根据文件名提取站点号'''
-        station_id = file_name.split('_')[3]
-        return station_id
-
     unique_set = set([])
     unique_id = set([])
     for fn in dup_set:
@@ -167,7 +169,14 @@ def get_expect_time(preset_path):
     return result
 
 
-def extract_curset(files, expect_time, preset_path):
+def get_station_id(file_name):
+    '''根据文件名提取站点号'''
+    station_id = file_name.split('_')[3]
+    return station_id
+
+
+def extract_curset(files, expect_time, preset_path,
+                   exclude=exclued):
     '''收集文件源（文件名）'''
 
     # 初始化当前处理集合，curset : current set
@@ -197,12 +206,14 @@ def extract_curset(files, expect_time, preset_path):
     newset = set(files) - file_preset
 
     for file in newset:
-        file_time = abstr_time(file, level='minute')
-        # 每一个文件匹配一个标准时间索引
-        match_time = match_standard(file_time)
-        # 若匹配的标准时次为期望时次，则加入curset，否则忽略
-        if match_time == expect_time:
-            curset.add(file)
+        # 排除部分站点
+        if get_station_id(file) not in exclued:
+            file_time = abstr_time(file, level='minute')
+            # 每一个文件匹配一个标准时间索引
+            match_time = match_standard(file_time)
+            # 若匹配的标准时次为期望时次，则加入curset，否则忽略
+            if match_time == expect_time:
+                curset.add(file)
 
     # 删除该时次重复的站
     curset = drop_duplicate_station(curset)
@@ -304,8 +315,10 @@ def match_standard(timestr,date=datetime.utcnow()):
     try:
         min_index = min(delt)[1]
     except ValueError:
-        yesterday = datetime.utcnow() - timedelta(days=1)
-        result = match_standard(timestr,date=yesterday)
+        logger.debug('{} can\'t match time index.'.format(timestr))
+        match_date = date.strftime('%Y%m%d')
+        logger.debug('date to match is {}'.format(match_date))
+        result = None
     else:
         result = std_index[min_index]
 
@@ -348,16 +361,11 @@ def delay_when_data_dir_empty(path):
     while True:
         files = os.listdir(path)
         if files:
-            is_empty = False
-            print('target dir isn\'t empty')
-            time.sleep(5)
             break
         else:
             print('target dir is empty.')
             logger.info(' target dir is empty.')
             time.sleep(10)
-
-    return is_empty
 
 
 def main():

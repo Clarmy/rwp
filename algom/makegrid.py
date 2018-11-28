@@ -24,6 +24,13 @@ from algom.errors import OutputError
 import datetime
 
 
+with open('../config.json') as f:
+    config = js.load(f)
+
+# 排除部分不可靠站点
+exclude = config['exclude']
+
+
 def nan2num(arr,fill_value):
     '''将np.nan转化为特定数字'''
     where_is_nan = np.isnan(arr)
@@ -232,7 +239,7 @@ def full_interp(pfn, method='linear', attr=False, savepath=None):
             f.write(js_str)
 
 
-    dataset = multi_v_interp(load_js(pfn))
+    dataset = multi_v_interp(load_js(pfn,exclude))
     sh = std_sh()
 
     min_lon = 85
