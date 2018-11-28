@@ -33,7 +33,13 @@ except IndexError:
     SAVE_PATH = config['mkgrd']['oper']['save_path']
     PRESET_PATH = config['mkgrd']['oper']['preset_path']
 else:
-    if test_flag == 'test':
+    if test_flag == 'test1':
+        ROOT_PATH = config['parse']['oper']['save_path']
+        LOG_PATH = config['mkgrd']['test']['log_path']
+        SAVE_PATH = config['mkgrd']['test']['save_path']
+        PRESET_PATH = config['mkgrd']['test']['preset_path']
+    elif test_flag == 'test2':
+        ROOT_PATH = config['parse']['test']['save_path']
         LOG_PATH = config['mkgrd']['test']['log_path']
         SAVE_PATH = config['mkgrd']['test']['save_path']
         PRESET_PATH = config['mkgrd']['test']['preset_path']
