@@ -204,6 +204,8 @@ def extract_curset(files, expect_time, preset_path,
 
     # （未处理）新集是当前全集减去前集
     newset = set(files) - file_preset
+    if not newset:
+        logger.debug(' newset is empty.')
 
     for file in newset:
         # 排除部分站点
@@ -214,6 +216,7 @@ def extract_curset(files, expect_time, preset_path,
             # 若匹配的标准时次为期望时次，则加入curset，否则忽略
             if match_time == expect_time:
                 curset.add(file)
+                logger.debug(' added {}'.format(file))
 
     # 删除该时次重复的站
     curset = drop_duplicate_station(curset)

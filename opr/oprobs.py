@@ -146,6 +146,7 @@ def main(rootpath, outpath):
             if turn_day_delay >= 60:
 
                 today = opt.get_today_date()
+                logger.debug(' today: {}'.format(today))
                 turn_day_switch = False
 
                 try:
@@ -158,6 +159,7 @@ def main(rootpath, outpath):
                 opt.delay_when_today_dir_missing(rootpath)
 
                 inpath = rootpath + today + '/'
+                logger.debug(' inpath: {}'.format(inpath))
                 savepath = outpath + today + '/'
                 opt.check_dir(savepath)
 
