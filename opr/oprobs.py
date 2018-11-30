@@ -134,6 +134,10 @@ def main(rootpath, outpath):
 
     expect_time = opt.get_expect_time(PRESET_PATH)
     turn_time = False
+
+    # 今日时间对象
+    dt_today = datetime.utcnow()
+
     while True:
         # 如果当前日期与上次记录不一致
         if opt.get_today_date() != today and turn_day_switch == False:
@@ -166,10 +170,12 @@ def main(rootpath, outpath):
                 # 若今日数据目录为空，则等待至其有值再继续
                 opt.delay_when_data_dir_empty(inpath)
 
+                dt_today = datetime.utcnow()
+
         files = os.listdir(inpath)
 
         if initial == True:
-            print('initialize.')
+            print('{}: initialize.'.format(datetime.utcnow()))
             logger.info(' initialize.')
             initial = False
         else:
@@ -178,18 +184,18 @@ def main(rootpath, outpath):
         if turn_time == True:
             expect_time = opt.get_expect_time(PRESET_PATH)
 
-        curset, turn_time = opt.extract_curset(files,expect_time,
+        curset, turn_time = opt.extract_curset(files,expect_time, dt_today,
                                                PRESET_PATH)
 
         if curset:
-            print('processing: {}'.format(expect_time))
+            print('{0}: processing: {1}'.format(datetime.utcnow(),expect_time))
             logger.info(' processing: {}'.format(expect_time))
             result_list = gather(curset, inpath)
             if result_list:
                 save_as_json(result_list,
                              savepath + expect_time + '.json',
                              mod='multi')
-                print('finished.')
+                print('{}: finished.'.format(datetime.utcnow()))
                 logger.info(' finished.')
 
         else:
@@ -203,5 +209,5 @@ if __name__ == '__main__':
         # 若出现异常，则打印回溯信息并记入日志
         traceback_message = traceback.format_exc()
         print(traceback_message)
-        logger.info(traceback_message)
+        logger.error(traceback_message)
         exit()

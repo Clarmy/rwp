@@ -160,7 +160,7 @@ def get_expect_time(preset_path):
     if time_preset:
         result = next_time_index(sorted(list(time_preset))[-1])
     else:
-        std_index = standard_time_index()
+        std_index = standard_time_index(datetime.utcnow())
         now = datetime.utcnow()
         for idx in std_index:
             if now >= strftime_to_datetime(idx):
@@ -175,7 +175,7 @@ def get_station_id(file_name):
     return station_id
 
 
-def extract_curset(files, expect_time, preset_path,
+def extract_curset(files, expect_time, dt_today, preset_path,
                    exclude=exclued):
     '''收集文件源（文件名）'''
 
@@ -183,7 +183,6 @@ def extract_curset(files, expect_time, preset_path,
     curset = set([])
 
     # 设置前集路径
-    today = get_today_date()
     time_preset_pfn = preset_path + 'times.pk'
     file_preset_pfn = preset_path + 'files.pk'
 
@@ -197,10 +196,9 @@ def extract_curset(files, expect_time, preset_path,
     time_preset = load_preset(time_preset_pfn)
     file_preset = load_preset(file_preset_pfn)
 
-    # 获取期望时次
-    # expect_time = get_expect_time(preset_path)
-    print('expecting: %s' % expect_time)
-    logger.info(' expecting: %s' % expect_time)
+    # 记录期望时次
+    print('{0}: expecting: {1}'.format(datetime.utcnow(),expect_time))
+    logger.info(' expecting: {}'.format(expect_time))
 
     # （未处理）新集是当前全集减去前集
     newset = set(files) - file_preset
@@ -212,7 +210,7 @@ def extract_curset(files, expect_time, preset_path,
         if get_station_id(file) not in exclued:
             file_time = abstr_time(file, level='minute')
             # 每一个文件匹配一个标准时间索引
-            match_time = match_standard(file_time)
+            match_time = match_standard(file_time,dt_today)
             # 若匹配的标准时次为期望时次，则加入curset，否则忽略
             if match_time == expect_time:
                 curset.add(file)
@@ -220,13 +218,13 @@ def extract_curset(files, expect_time, preset_path,
 
     # 删除该时次重复的站
     curset = drop_duplicate_station(curset)
-    print('real time received: {}'.format(len(curset)))
+    print('{0}: real time received: {1}'.format(datetime.utcnow(),len(curset)))
     logger.info(' real time received: {}'.format(len(curset)))
 
     # 达到时间阈值后返回该集合
     spent = datetime.utcnow() - strftime_to_datetime(expect_time)
     if  spent > timedelta(minutes=6):
-        print('finally received: {}'.format(len(curset)))
+        print('{0}: finally received: {1}'.format(datetime.utcnow(),len(curset)))
         logger.info(' finally received: {}'.format(len(curset)))
         file_preset.update(curset)
         time_preset.add(expect_time)
@@ -235,7 +233,7 @@ def extract_curset(files, expect_time, preset_path,
         result =  curset
         if not result:
             # 若超时但结果为空集，说明该时次缺失，缺失标志改为True
-            print('{} is missing.'.format(expect_time))
+            print('{0}: {1} is missing.'.format(datetime.utcnow(),expect_time))
             logger.info(' {} is missing.'.format(expect_time))
         turn_time = True
     else:
@@ -269,7 +267,7 @@ def load_preset(path):
     return preset
 
 
-def standard_time_index(date=datetime.utcnow()):
+def standard_time_index(date):
     '''建立逐6分钟标准时间索引'''
     year = str(date.year)
     month = str(date.month).zfill(2)
@@ -287,7 +285,7 @@ def standard_time_index(date=datetime.utcnow()):
     return tuple(stdt_index)
 
 
-def match_standard(timestr,date=datetime.utcnow()):
+def match_standard(timestr,date):
     '''（规定格式的）任意时间字符串向标准时间索引的匹配
 
     输入参数
@@ -353,7 +351,8 @@ def delay_when_today_dir_missing(rootpath):
             is_exist = True
             break
         else:
-            print('today dir: {} dosen\'t exist.'.format(today))
+            print('{0}: today dir: {1} dosen\'t exist.'.format(datetime.utcnow(),
+                                                               today))
             logger.info(' today dir: {} dosen\'t exist.'.format(today))
             time.sleep(10)
 
@@ -366,7 +365,7 @@ def delay_when_data_dir_empty(path):
         if files:
             break
         else:
-            print('target dir is empty.')
+            print('{}: target dir is empty.'.format(datetime.utcnow()))
             logger.info(' target dir is empty.')
             time.sleep(10)
 
