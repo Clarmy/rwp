@@ -15,9 +15,9 @@ import os
 import time
 import json as js
 import traceback
+import shutil as st
 from datetime import datetime, timedelta
 import optools as opt
-# import algom.makegrid as mkg
 import algom.shear as shr
 
 
@@ -34,17 +34,20 @@ except IndexError:
     LOG_PATH = config['shear']['oper']['log_path']
     SAVE_PATH = config['shear']['oper']['save_path']
     PRESET_PATH = config['shear']['oper']['preset_path']
+    BUFFER_PATH = config['shear']['oper']['buffer_path']
 else:
     if test_flag == 'test1':
         ROOT_PATH = config['mkgrd']['oper']['save_path']
         LOG_PATH = config['shear']['test']['log_path']
         SAVE_PATH = config['shear']['test']['save_path']
         PRESET_PATH = config['shear']['test']['preset_path']
+        BUFFER_PATH = config['shear']['test']['buffer_path']
     elif test_flag == 'test2':
         ROOT_PATH = config['mkgrd']['test']['save_path']
         LOG_PATH = config['shear']['test']['log_path']
         SAVE_PATH = config['shear']['test']['save_path']
         PRESET_PATH = config['shear']['test']['preset_path']
+        BUFFER_PATH = config['shear']['test']['buffer_path']
     else:
         raise ValueError('Unkown flag')
 
@@ -53,6 +56,7 @@ else:
 opt.check_dir(LOG_PATH)
 opt.check_dir(PRESET_PATH)
 opt.check_dir(SAVE_PATH)
+opt.check_dir(BUFFER_PATH)
 
 
 # 配置日志信息
@@ -60,7 +64,7 @@ import log
 logger = log.setup_custom_logger(LOG_PATH+'wprd','root')
 
 
-def main(rootpath, outpath):
+def main(rootpath, bufferpath, outpath):
     try:
         print('Initial')
         logger.info(' Initial')
@@ -85,8 +89,16 @@ def main(rootpath, outpath):
                 print('processing...')
                 logger.info(' processing...')
                 for fn in newfiles:
+                    # 为防止nc文件在写入的时候被下游程序读取并造成未知错误，
+                    #   因此先将输出的文件保存到缓存文件夹，
+                    #   在输出完成以后再将文件复制到目标文件夹，并清除缓存中的文件，
+                    #   经过测试，shutil的复制时间在0.015s的时间量级，
+                    #   因此下游程序程序在本程序复制文件期间读取数据的可能性微乎其微。
                     savepfn = savepath + fn.split('.')[0] + '.nc'
-                    shr.full_wind_shear(foldpath + fn, savepfn)
+                    bufferpfn = bufferpath + fn.split('.')[0] + '.nc'
+                    shr.full_wind_shear(foldpath + fn, bufferpfn)
+                    st.copy(bufferpfn,savepfn)
+                    os.remove(bufferpfn)
                     print('{0} finished'.format(fn))
                     logger.info(' {0} finished'.format(fn))
 
@@ -99,5 +111,4 @@ def main(rootpath, outpath):
 
 
 if __name__ == '__main__':
-
-    main(ROOT_PATH, SAVE_PATH)
+    main(ROOT_PATH, BUFFER_PATH, SAVE_PATH)
