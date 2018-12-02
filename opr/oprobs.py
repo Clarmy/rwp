@@ -197,6 +197,9 @@ def main(rootpath, outpath):
                              mod='multi')
                 print('{}: finished.'.format(datetime.utcnow()))
                 logger.info(' finished.')
+            else:
+                print('{}: parsed empty content.'.format(datetime.utcnow()))
+                logger.info(' parsed empty content.')
 
         else:
             time.sleep(20)
