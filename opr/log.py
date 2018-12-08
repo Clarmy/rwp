@@ -21,7 +21,7 @@ def setup_custom_logger(log_path,name):
     handler.suffix = '%Y%m%d.log'
     handler.setFormatter(formatter)
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
     return logger
