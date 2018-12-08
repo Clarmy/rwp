@@ -36,22 +36,28 @@ def main(target_path):
         dt = datetime.utcnow() - timedelta(days=3)
         while loop:
             dt_str = dt.strftime('%Y%m%d')
-            try:
-                st.rmtree(target_path + dt_str)
-                print('{0}: removed {1} dir'.format(datetime.utcnow(),dt_str))
-                logger.info(' removed {} dir'.format(dt_str))
-            except FileNotFoundError:
+            rmpath = target_path + dt_str
+            if os.path.exists(rmpath):
+                try:
+                    st.rmtree(target_path + dt_str)
+                except OSError as e:
+                    print('{0}: failed to remove {1}, '\
+                          'error: OSError, reason: {2}'.format(datetime.utcnow(),
+                                                          dt_str, e))
+                    logger.error(' failed to remove {0}, '\
+                                 'error: OSError, reason: {1}'.format(dt_str, e))
+                else:
+                    print('{0}: successfully removed {1} dir'.format(
+                                                    datetime.utcnow(),dt_str))
+                    logger.info(' successfully removed {} dir'.format(dt_str))
+            else:
                 print('{0}: no dir to remove'.format(datetime.utcnow()))
                 logger.info(' no dir to remove')
                 loop = False
-            except Exception as e:
-                print('{0}:  {1} '.format(datetime.utcnow(),e))
-                logger.error(e)
-                continue
             dt = dt - timedelta(days=1)
-        print('{0}: sleep for 1 day'.format(datetime.utcnow()))
-        logger.info(' sleep for 1 day')
-        time.sleep(86400)
+        print('{0}: sleep for 1 hour'.format(datetime.utcnow()))
+        logger.info(' sleep for 1 hour')
+        time.sleep(3600)
 
 
 if __name__ == '__main__':
